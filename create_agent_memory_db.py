@@ -646,12 +646,71 @@ def run_script_tests(conn, script_name: str = None, verbose: bool = True):
     return results
 '''
 
+create_table_script = '''
+def create_domain_table(conn, table_name, columns, description=None):
+    """
+    Create a domain table following agent_memory conventions.
+
+    Args:
+        conn: SQLite connection
+        table_name: Name of the table to create
+        columns: List of (name, type, constraints) tuples
+                 e.g., [("name", "TEXT", "NOT NULL"), ("user_id", "INTEGER", "REFERENCES user(id)")]
+        description: Table description for z_schema
+
+    Returns: {"created": True, "table": table_name, "columns": [...]}
+    """
+    cursor = conn.cursor()
+
+    # Build column definitions
+    col_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
+    for col in columns:
+        name, dtype = col[0], col[1]
+        constraints = col[2] if len(col) > 2 else ""
+        col_defs.append(f"{name} {dtype} {constraints}".strip())
+
+    # Add timestamp columns
+    col_defs.append("created_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+    col_defs.append("updated_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+
+    # Create table
+    sql = f"CREATE TABLE IF NOT EXISTS {table_name} (\\n    " + ",\\n    ".join(col_defs) + "\\n)"
+    cursor.execute(sql)
+
+    # Create updated_at trigger
+    trigger_sql = f"""
+    CREATE TRIGGER IF NOT EXISTS trg_{table_name}_updated_at
+    AFTER UPDATE ON {table_name}
+    FOR EACH ROW
+    BEGIN
+        UPDATE {table_name} SET updated_at = CURRENT_TIMESTAMP WHERE rowid = NEW.rowid;
+    END
+    """
+    cursor.execute(trigger_sql)
+
+    # Document in z_schema
+    if description:
+        cursor.execute("INSERT OR REPLACE INTO z_schema (object_type, object_name, column_name, description) VALUES (?, ?, NULL, ?)",
+                      ("table", table_name, description))
+
+    # Document columns
+    for col in columns:
+        col_desc = col[3] if len(col) > 3 else None
+        if col_desc:
+            cursor.execute("INSERT OR REPLACE INTO z_schema (object_type, object_name, column_name, description) VALUES (?, ?, ?, ?)",
+                          ("table", table_name, col[0], col_desc))
+
+    conn.commit()
+    return {"created": True, "table": table_name, "columns": [c[0] for c in columns] + ["created_at", "updated_at"]}
+'''
+
 scripts = [
     ('bump_version_smart', 'Bump semantic version (MAJOR/MINOR/PATCH)', 'python', bump_version_script, 'z_version', 'v1.0.0', 1),
     ('smart_remember_local', 'Store memory with heuristic importance. No API needed.', 'python', smart_remember_script, 'z_memory', 'v1.0.0', 1),
     ('decay_memories', 'Soft-delete old, low-importance, rarely-accessed memories.', 'python', decay_script, 'z_memory', 'v1.0.0', 1),
     ('purge_memories', 'Permanently delete long-inactive memories.', 'python', purge_script, 'z_memory', 'v1.0.0', 1),
     ('run_script_tests', 'TDD test runner for z_script_test.', 'python', test_runner_script, 'z_script_test', 'v1.0.0', 1),
+    ('create_domain_table', 'Create domain table with proper timestamps and triggers.', 'python', create_table_script, 'all', 'v1.0.0', 1),
 ]
 
 cursor.executemany('INSERT INTO z_script_catalog (script_name, description, language, script_body, applies_to, version_target, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)', scripts)
@@ -683,6 +742,10 @@ params = [
     ('run_script_tests', None, 'conn', 'sqlite3.Connection', None, 'SQLite connection', 1),
     ('run_script_tests', None, 'script_name', 'Optional[str]', 'None', 'Test specific script or all', 2),
     ('run_script_tests', None, 'verbose', 'bool', 'True', 'Print output', 3),
+    ('create_domain_table', None, 'conn', 'sqlite3.Connection', None, 'SQLite connection', 1),
+    ('create_domain_table', None, 'table_name', 'str', None, 'Name of table to create', 2),
+    ('create_domain_table', None, 'columns', 'List[Tuple]', None, 'List of (name, type, constraints, description)', 3),
+    ('create_domain_table', None, 'description', 'str', 'None', 'Table description for z_schema', 4),
 ]
 
 cursor.executemany('INSERT INTO z_script_params VALUES (?,?,?,?,?,?,?)', params)
@@ -759,6 +822,39 @@ link_prompt = '''Link memories to domain entities via source/source_id:
 - source="document", source_id=document_id → from a reference
 - source="task", source_id=task_id → related to a task'''
 
+create_table_prompt = '''When creating new domain tables, follow these conventions:
+
+1. REQUIRED COLUMNS:
+   - created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+   - updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+
+2. REQUIRED TRIGGER:
+   CREATE TRIGGER trg_{table}_updated_at
+   AFTER UPDATE ON {table}
+   FOR EACH ROW
+   BEGIN
+       UPDATE {table} SET updated_at = CURRENT_TIMESTAMP WHERE rowid = NEW.rowid;
+   END;
+
+3. DOCUMENT IN z_schema:
+   INSERT INTO z_schema (object_type, object_name, column_name, description)
+   VALUES ('table', '{table}', NULL, 'Description of table purpose');
+   -- Add row for each column
+
+4. FOREIGN KEYS:
+   - Use ON DELETE CASCADE for owned children
+   - Use ON DELETE SET NULL for optional references
+   - Name constraint: fk_{table}_{referenced_table}
+
+Example:
+CREATE TABLE project (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    owner_id INTEGER REFERENCES user(id) ON DELETE SET NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);'''
+
 prompts = [
     ('system_bootstrap', 'System Bootstrap', bootstrap_prompt, 'system', 'all', None, 'LLM', None, 1, 'v1.0'),
     ('handle_remember_command', 'remember this, save this', remember_prompt, 'agent_action', 'z_memory', 'content,memory_type,source', 'LLM', None, 1, 'v1.0'),
@@ -767,6 +863,7 @@ prompts = [
     ('handle_reinforce_command', "that's important, boost", reinforce_prompt, 'agent_action', 'z_memory', 'memory_id,boost', 'LLM', None, 1, 'v1.0'),
     ('assess_memory_importance', 'rate importance', importance_prompt, 'evaluation', 'z_memory', 'content,importance', 'LLM', None, 1, 'v1.0'),
     ('link_memory_to_domain', 'associate memory with entity', link_prompt, 'guidance', 'z_memory', 'source,source_id', 'LLM', None, 1, 'v1.0'),
+    ('create_domain_table', 'create new table, add table', create_table_prompt, 'guidance', 'all', 'table_name,columns', 'LLM', None, 1, 'v1.0'),
 ]
 
 cursor.executemany('INSERT INTO z_prompt_catalog (prompt_nickname, question_pattern, prompt_template, object_type, object_name, field_names, target_audience, example_response, is_active, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', prompts)
