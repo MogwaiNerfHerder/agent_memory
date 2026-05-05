@@ -170,7 +170,8 @@ CREATE TABLE z_memory (
     accessed_at TIMESTAMP,
     access_count INTEGER DEFAULT 0,
     expires_at TIMESTAMP,
-    is_active BOOLEAN DEFAULT 1
+    is_active BOOLEAN DEFAULT 1,
+    deleted_at TIMESTAMP
 )
 ''')
 cursor.execute('CREATE INDEX idx_memory_type ON z_memory(memory_type)')
@@ -568,18 +569,22 @@ def decay_memories(conn, days_old: int = 30, importance_threshold: int = 3, min_
 
 purge_script = r'''
 def purge_memories(conn, days_inactive: int = 90, dry_run: bool = True):
-    """Permanently delete memories that have been inactive for N days."""
+    """Soft-delete long-inactive memories (sets deleted_at, preserves rows for recovery)."""
     cursor = conn.cursor()
     cursor.execute("""
         SELECT memory_id, content, memory_type, created_at FROM z_memory
-        WHERE is_active = 0 AND ((accessed_at IS NOT NULL AND accessed_at < datetime('now', '-' || ? || ' days'))
+        WHERE is_active = 0 AND deleted_at IS NULL
+          AND ((accessed_at IS NOT NULL AND accessed_at < datetime('now', '-' || ? || ' days'))
               OR (accessed_at IS NULL AND created_at < datetime('now', '-' || ? || ' days')))
     """, (days_inactive, days_inactive))
     candidates = cursor.fetchall()
     candidate_ids = [row[0] for row in candidates]
 
     if not dry_run and candidate_ids:
-        cursor.executemany("DELETE FROM z_memory WHERE memory_id = ?", [(mid,) for mid in candidate_ids])
+        cursor.executemany(
+            "UPDATE z_memory SET deleted_at = datetime('now') WHERE memory_id = ?",
+            [(mid,) for mid in candidate_ids],
+        )
         conn.commit()
 
     return {"purged_count": len(candidates), "purged_ids": candidate_ids,

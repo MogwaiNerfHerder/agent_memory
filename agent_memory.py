@@ -48,6 +48,7 @@ class AgentMemory:
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
         self._embedder = None
+        self._migrate()
 
     @property
     def embedder(self):
@@ -136,7 +137,7 @@ class AgentMemory:
         """
         query_vec = self.embedder.encode(query).astype(np.float32)
 
-        sql = "SELECT memory_id, content, memory_type, importance, embedding FROM z_memory WHERE embedding IS NOT NULL"
+        sql = "SELECT memory_id, content, memory_type, importance, embedding FROM z_memory WHERE embedding IS NOT NULL AND deleted_at IS NULL"
         params = []
 
         if not include_inactive:
@@ -203,6 +204,22 @@ class AgentMemory:
             self.conn.execute("UPDATE z_memory SET is_active=0 WHERE memory_id=?", (memory_id,))
         self.conn.commit()
 
+    def restore(self, memory_id: int) -> bool:
+        """Restore a purged memory (undo soft-delete).
+
+        Args:
+            memory_id: ID of memory to restore
+
+        Returns:
+            True if a memory was restored, False if not found or not purged
+        """
+        cursor = self.conn.execute(
+            "UPDATE z_memory SET deleted_at = NULL, is_active = 1 WHERE memory_id = ? AND deleted_at IS NOT NULL",
+            (memory_id,)
+        )
+        self.conn.commit()
+        return cursor.rowcount > 0
+
     def reinforce(self, memory_id: int, boost: int = 1):
         """Increase importance of a memory.
 
@@ -236,11 +253,11 @@ class AgentMemory:
         return decay_memories(self.conn, days_old, importance_threshold, 3, dry_run)
 
     def purge(self, days_inactive: int = 90, dry_run: bool = True) -> dict:
-        """Permanently delete long-inactive memories.
+        """Soft-delete long-inactive memories (sets deleted_at, preserves for recovery).
 
         Args:
             days_inactive: Days since deactivation
-            dry_run: If True, report without deleting
+            dry_run: If True, report without changing
 
         Returns:
             dict with purged_count, purged_ids
@@ -259,6 +276,7 @@ class AgentMemory:
             SELECT
                 COUNT(*) as total,
                 SUM(CASE WHEN is_active=1 THEN 1 ELSE 0 END) as active,
+                SUM(CASE WHEN deleted_at IS NOT NULL THEN 1 ELSE 0 END) as purged,
                 COUNT(DISTINCT memory_type) as types,
                 AVG(importance) as avg_importance,
                 AVG(access_count) as avg_access
@@ -267,16 +285,17 @@ class AgentMemory:
         return {
             "total": row["total"],
             "active": row["active"],
+            "purged": row["purged"],
             "types": row["types"],
             "avg_importance": round(row["avg_importance"] or 0, 2),
             "avg_access": round(row["avg_access"] or 0, 2),
         }
 
     def list_memories(self, include_inactive: bool = False, limit: int = 20) -> List[dict]:
-        """List memories."""
-        sql = "SELECT memory_id, content, memory_type, importance, access_count, is_active FROM z_memory"
+        """List memories (excludes purged)."""
+        sql = "SELECT memory_id, content, memory_type, importance, access_count, is_active FROM z_memory WHERE deleted_at IS NULL"
         if not include_inactive:
-            sql += " WHERE is_active=1"
+            sql += " AND is_active=1"
         sql += " ORDER BY importance DESC, access_count DESC LIMIT ?"
 
         rows = self.conn.execute(sql, (limit,)).fetchall()
@@ -299,6 +318,14 @@ class AgentMemory:
     # =========================================================================
     # INTERNAL
     # =========================================================================
+
+    def _migrate(self):
+        """Auto-migrate schema for older databases."""
+        cursor = self.conn.execute("PRAGMA table_info(z_memory)")
+        columns = {row["name"] for row in cursor.fetchall()}
+        if "deleted_at" not in columns:
+            self.conn.execute("ALTER TABLE z_memory ADD COLUMN deleted_at TIMESTAMP")
+            self.conn.commit()
 
     def _get_script(self, name: str) -> str:
         """Get script body from z_script_catalog."""
@@ -327,10 +354,11 @@ RECALL:
 MANAGE:
   memory.reinforce(memory_id, boost=1)                  - Increase importance
   memory.forget(memory_id, hard_delete=False)           - Remove memory
+  memory.restore(memory_id)                             - Recover a purged memory
 
 LIFECYCLE:
   memory.decay(days_old=30, dry_run=True)               - Soft-delete old noise
-  memory.purge(days_inactive=90, dry_run=True)          - Hard-delete inactive
+  memory.purge(days_inactive=90, dry_run=True)          - Soft-delete inactive (recoverable)
 
 INTROSPECT:
   memory.stats()                                        - Memory statistics
