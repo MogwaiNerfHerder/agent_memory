@@ -122,6 +122,7 @@ class AgentMemory:
         memory_type: str = None,
         min_importance: int = 0,
         include_inactive: bool = False,
+        client_id: int = None,
     ) -> List[Tuple[float, int, str, str, int]]:
         """Find similar memories using semantic search.
 
@@ -131,6 +132,8 @@ class AgentMemory:
             memory_type: Filter by type
             min_importance: Minimum importance threshold
             include_inactive: Include decayed memories ("remember when...")
+            client_id: Restrict to a tenant's memories (requires the
+                client_knowledge schema extension that adds z_memory.client_id)
 
         Returns:
             List of (similarity, memory_id, content, type, importance)
@@ -148,6 +151,9 @@ class AgentMemory:
         if min_importance > 0:
             sql += " AND importance>=?"
             params.append(min_importance)
+        if client_id is not None:
+            sql += " AND client_id=?"
+            params.append(client_id)
 
         rows = self.conn.execute(sql, params).fetchall()
 
@@ -171,18 +177,20 @@ class AgentMemory:
 
         return results[:top_k]
 
-    def context(self, query: str, top_k: int = 5, memory_type: str = None) -> str:
+    def context(self, query: str, top_k: int = 5, memory_type: str = None,
+                 client_id: int = None) -> str:
         """Get relevant memories formatted for LLM context injection.
 
         Args:
             query: Search text
             top_k: Number of memories to include
             memory_type: Filter by type
+            client_id: Restrict to a tenant (see recall())
 
         Returns:
             Markdown-formatted memory context
         """
-        memories = self.recall(query, top_k, memory_type)
+        memories = self.recall(query, top_k=top_k, memory_type=memory_type, client_id=client_id)
         if not memories:
             return ""
 
@@ -291,14 +299,20 @@ class AgentMemory:
             "avg_access": round(row["avg_access"] or 0, 2),
         }
 
-    def list_memories(self, include_inactive: bool = False, limit: int = 20) -> List[dict]:
+    def list_memories(self, include_inactive: bool = False, limit: int = 20,
+                      client_id: int = None) -> List[dict]:
         """List memories (excludes purged)."""
         sql = "SELECT memory_id, content, memory_type, importance, access_count, is_active FROM z_memory WHERE deleted_at IS NULL"
+        params = []
         if not include_inactive:
             sql += " AND is_active=1"
+        if client_id is not None:
+            sql += " AND client_id=?"
+            params.append(client_id)
         sql += " ORDER BY importance DESC, access_count DESC LIMIT ?"
+        params.append(limit)
 
-        rows = self.conn.execute(sql, (limit,)).fetchall()
+        rows = self.conn.execute(sql, params).fetchall()
         return [dict(row) for row in rows]
 
     def bootstrap(self) -> str:
