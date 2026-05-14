@@ -458,7 +458,7 @@
 <p>Sit at your desk for a week and count how many times someone Slacks, emails, or pulls aside a colleague with some version of "hey, do you know where the…" Every one of those is a <em>double burn</em>. The asker spent ten or thirty minutes failing to find it before giving up. The person asked got pulled out of whatever they were doing to take a swing at the answer, often without actually knowing it either. Then both of them pay a 23-minute context-switch tax to get back to what they were doing. Multiply by your headcount. The bill is enormous, weekly, and invisible. It never shows up in any dashboard.</p>
 <p>The AI hype cycle has not solved this. The pilots most companies are running don't know your company any better than your search box does. The blocker isn't the model. The model has no memory of <em>you</em>.</p>
 <p>The fix is not another wiki. Not another chatbot. Not another search index. It is an <em>organizational knowledge library</em> — what we call a <strong>memory network</strong>. A graph of the people, accounts, meetings, decisions, risks, and artifacts that make up how your company actually operates.</p>
-<p>A keyword search for "personas" in our Box returns tens of thousands of matches. Our memory network returns <em>the three slides Bill showed Larry's team in March, the action item Larry pushed back on, and the follow-up Mark sent that closed the loop.</em> That's the difference between <em>retrieval</em> and <em>recall</em>, and it's the difference between AI that is useful and AI that is a demo.</p>
+<p>A keyword search for "personas" in our Box returns tens of thousands of matches. Our memory network returns <em>the three slides Walter showed Larry's team in March, the action item Larry pushed back on, and the follow-up Harold sent that closed the loop.</em> That's the difference between <em>retrieval</em> and <em>recall</em>, and it's the difference between AI that is useful and AI that is a demo.</p>
 <p>This paper makes the case for building that memory layer first. Not in twelve months. Not as part of a transformation. This quarter, on one workflow, with the data you already have. Once you have it, every subsequent AI investment compounds against it. Without it, your AI strategy is a Sherpa who has never been on the mountain.</p>
 <div class="pullquote">A memory network is the first of three pillars in Cortado's Innovation-as-a-Service approach: <strong>Data, Process, People.</strong> Get the Data pillar wrong and the other two have nothing to stand on.</div>
 </section>
@@ -521,16 +521,16 @@
 <section id="s2">
 <h2><span class="sec-num">§2</span>What Memory Actually Is (And Why "Search" Was the Wrong Word All Along)</h2>
 <p><strong>Humans don't search. They remember.</strong></p>
-<p>That sounds like a small distinction. It isn't. Search returns a list of documents. Memory returns an <em>answer.</em> When you ask a tenured colleague "what happened with the Acme renewal?", they don't hand you a folder of files. They tell you a story: <em>Acme got nervous about pricing in January, Bill flew out to meet with their CFO, we agreed to a multi-year structure, Larry signed off in March.</em> That story is assembled in the moment from facts the colleague has connected over time.</p>
+<p>That sounds like a small distinction. It isn't. Search returns a list of documents. Memory returns an <em>answer.</em> When you ask a tenured colleague "what happened with the Acme renewal?", they don't hand you a folder of files. They tell you a story: <em>Acme got nervous about pricing in January, Walter flew out to meet with their CFO, we agreed to a multi-year structure, Larry signed off in March.</em> That story is assembled in the moment from facts the colleague has connected over time.</p>
 <p>That's recall. And recall has structure.</p>
 
 <h3>Memory has a shape</h3>
 <p>Every fact your organization knows can be reduced to a sentence of the form:</p>
 <div class="pullquote"><em>Someone</em> (or <em>something</em>) <strong>did something</strong> to (or with, or about) <em>someone else</em>, on some <em>date</em>, and you can find evidence of it in <em>some artifact.</em></div>
 <ul>
-  <li><em>Bill</em> <strong>committed-to</strong> <em>the action item from the April 12 Acme call.</em></li>
+  <li><em>Walter</em> <strong>committed-to</strong> <em>the action item from the April 12 Acme call.</em></li>
   <li><em>Larry</em> <strong>is-account-rep-for</strong> <em>First Federal.</em></li>
-  <li><em>Mark</em> <strong>raised-a-risk</strong> about <em>the Northwind contract on the May 3 Slack thread.</em></li>
+  <li><em>Harold</em> <strong>raised-a-risk</strong> about <em>the Northwind contract on the May 3 Slack thread.</em></li>
   <li><em>The Acme renewal decision</em> <strong>was-made-on</strong> <em>April 28, in the executive review meeting.</em></li>
 </ul>
 <p>Each sentence has the same structure: two <strong>entities</strong> (people, companies, projects, deals, products, meetings) and one named <strong>relationship</strong> that connects them (worked-on, decided, opposed, owns, is-account-rep-for, attended, raised-as-risk). String enough of those sentences together and you have a <em>graph</em>: a network of facts where any fact can be traversed to its neighbors.</p>
@@ -705,9 +705,9 @@
   <div class="mn"><span class="label">Memory network</span>The current rep, when they last spoke to the customer, what was discussed, the next scheduled touchpoint, and any sentiment flags from the last call.</div>
 </div>
 
-<p class="question">"What happened between Bill and Larry on the Acme renewal?"</p>
+<p class="question">"What happened between Walter and Larry on the Acme renewal?"</p>
 <div class="compare">
-  <div class="ks"><span class="label">Keyword search</span>Literally nothing useful. There is no document called "what happened between Bill and Larry."</div>
+  <div class="ks"><span class="label">Keyword search</span>Literally nothing useful. There is no document called "what happened between Walter and Larry."</div>
   <div class="mn"><span class="label">Memory network</span>A chronological thread of every meeting, email, and Slack exchange the two of them had about Acme, plus the decisions that came out of each.</div>
 </div>
 
@@ -729,10 +729,10 @@
   <div class="mn"><span class="label">Memory network</span>The most recent meeting summary, the current pipeline stage, current blockers, and the next step's owner.</div>
 </div>
 
-<p class="question">"What did Bill commit to last week?"</p>
+<p class="question">"What did Walter commit to last week?"</p>
 <div class="compare">
   <div class="ks"><span class="label">Keyword search</span>Impossible. There is no index of "things people committed to."</div>
-  <div class="mn"><span class="label">Memory network</span>A list of activities Bill committed to or completed last week, grouped by source meeting, status-tracked, with the relevant transcript snippet for each.</div>
+  <div class="mn"><span class="label">Memory network</span>A list of activities Walter committed to or completed last week, grouped by source meeting, status-tracked, with the relevant transcript snippet for each.</div>
 </div>
 
 <p>The pattern across all of these: the memory network answers the question <em>as a person would</em>, not as a search engine does. It surfaces the right facts, with their context, with their source. The user doesn't get a stack of documents to wade through. They get an answer they can act on, with a way to verify it.</p>
@@ -800,7 +800,7 @@
       <circle cx="522" cy="124" r="13" fill="#97D700"/>
       <text x="522" y="129" font-size="14" font-weight="800" fill="#051C2C">3</text>
       <text x="602" y="129" font-size="15" font-weight="800" fill="#FFFFFF">RESOLVE</text>
-      <text x="590" y="151" font-size="11.5" fill="#FFFFFF">"Bill" = "Bill P"</text>
+      <text x="590" y="151" font-size="11.5" fill="#FFFFFF">"Walter" = "Walter P"</text>
       <text x="590" y="166" font-size="11.5" fill="#FFFFFF">canonical IDs</text>
     </g>
 
@@ -859,15 +859,15 @@
 <p>This is where most of the "is this even feasible?" gets answered. Two years ago, this step required custom-trained natural-language-processing models. Today, off-the-shelf LLMs (Claude, GPT, Gemini, and freely available open-source models like Llama and Mistral) handle it with high accuracy when given a tight schema and well-designed prompts. The math has changed. What used to take a team of NLP engineers and a six-figure annual budget can now be done with a few thousand dollars of API spend per month.</p>
 
 <h3>3. Resolve</h3>
-<p>Extracted mentions become canonical entities. <em>Bill, Bill P, William Piacitelli,</em> and the Slack ID <code>&lt;@U03J5&gt;</code> all collapse to the same person. <em>Acme, Acme Corp,</em> and <em>Acme Corporation</em> all collapse to the same company. <em>April 12 retro</em> and <em>the meeting last Thursday</em> are the same event.</p>
-<p>This step, <strong>entity resolution</strong>, is where most homegrown attempts fall apart. The naive approach (string matching) breaks immediately on initials, misspellings, and email addresses. The right approach is layered. Deterministic rules for the easy cases (exact-match emails, normalized domain names). Vector-embedding similarity for the medium cases (fuzzy name matches). LLM tie-breaks for the hard cases ("is Bill from the customer team the same person as Bill P from sales?"). It is unglamorous engineering and it is the part you cannot skip.</p>
+<p>Extracted mentions become canonical entities. <em>Walter, Walter P, Walter Pendragon,</em> and the Slack ID <code>&lt;@U03J5&gt;</code> all collapse to the same person. <em>Acme, Acme Corp,</em> and <em>Acme Corporation</em> all collapse to the same company. <em>April 12 retro</em> and <em>the meeting last Thursday</em> are the same event.</p>
+<p>This step, <strong>entity resolution</strong>, is where most homegrown attempts fall apart. The naive approach (string matching) breaks immediately on initials, misspellings, and email addresses. The right approach is layered. Deterministic rules for the easy cases (exact-match emails, normalized domain names). Vector-embedding similarity for the medium cases (fuzzy name matches). LLM tie-breaks for the hard cases ("is Walter from the customer team the same person as Walter P from sales?"). It is unglamorous engineering and it is the part you cannot skip.</p>
 
 <h3>4. Connect</h3>
 <p>Resolved entities get linked together by <strong>named relationships</strong>, which form the edges of the graph.</p>
 <div class="pullquote">
-  <em>Bill</em> → <strong>committed-to</strong> → <em>action-item-2026-04-12-#3</em><br>
+  <em>Walter</em> → <strong>committed-to</strong> → <em>action-item-2026-04-12-#3</em><br>
   <em>Larry</em> → <strong>is-account-rep-for</strong> → <em>First Federal</em><br>
-  <em>Mark</em> → <strong>raised-as-risk</strong> → <em>contract-northwind-payment-terms</em>
+  <em>Harold</em> → <strong>raised-as-risk</strong> → <em>contract-northwind-payment-terms</em>
 </div>
 <p>The graph grows with every meeting, every doc, every thread. New relationships can be proposed by the LLM as new patterns appear ("co-presented-with," "escalated-to," "blocked-by") and curated by a human before they enter the schema. The system does not require you to design the entire vocabulary up front. It lets the schema <em>emerge</em> from the work.</p>
 
@@ -883,7 +883,7 @@
 <ul>
   <li><strong>Capture</strong> because you can't remember what you didn't record.</li>
   <li><strong>Extract</strong> because raw transcripts and documents are not searchable as facts.</li>
-  <li><strong>Resolve</strong> because "Bill" and "Bill P" need to be the same Bill.</li>
+  <li><strong>Resolve</strong> because "Walter" and "Walter P" need to be the same Walter.</li>
   <li><strong>Connect</strong> because facts in isolation are trivia; facts in a graph are knowledge.</li>
   <li><strong>Traceability and Trust</strong> because users won't act on answers they can't check.</li>
   <li><strong>Query</strong> because the whole point is that someone (human or agent) gets the answer.</li>
@@ -907,7 +907,7 @@
 
 <h3>For technical staff: an MCP server</h3>
 <p>If your team includes engineers, analysts, or AI-native power users (people already running Claude Code, Cursor, or custom agent stacks), the right surface is a <strong>Model Context Protocol (MCP) server.</strong> MCP is the de facto standard for letting AI agents discover and call external tools. It was introduced by Anthropic in November 2024<sup><a href="#fn-mcp1">12</a></sup>, adopted by OpenAI across the Agents SDK and ChatGPT desktop in March 2025<sup><a href="#fn-mcp2">13</a></sup>, and donated to a Linux Foundation–affiliated foundation in December 2025 with Google, Microsoft, AWS, Cloudflare, and Bloomberg as founding members<sup><a href="#fn-mcp3">14</a></sup>. Thirteen months from announcement to neutrally-governed industry standard is the kind of momentum you only get when the alternative is everyone building the same plumbing themselves.</p>
-<p>An MCP server in front of your memory network lets any compliant AI agent query the graph as a first-class tool: <em>give me the open risks on Acme, find the last interaction with First Federal, summarize what Bill committed to last week.</em></p>
+<p>An MCP server in front of your memory network lets any compliant AI agent query the graph as a first-class tool: <em>give me the open risks on Acme, find the last interaction with First Federal, summarize what Walter committed to last week.</em></p>
 <p>This is the right answer for the people who already know what an MCP is and want it. <strong>It is the wrong answer for everyone else.</strong></p>
 
 <h3>For semi-technical staff: an agent skill or API</h3>
@@ -990,7 +990,7 @@
 <section class="footnotes" id="citations">
 <h2>Citations</h2>
 <ol>
-  <li id="fn-mark2005">Mark, G., González, V. M., &amp; Harris, J. "No Task Left Behind? Examining the Nature of Fragmented Work." <em>CHI 2005.</em> The "23 minutes 15 seconds" figure measures average time until an interrupted task is resumed, with workers handling roughly two intervening tasks before returning. Often misattributed to the same authors' 2008 paper "The Cost of Interrupted Work: More Speed and Stress." Microsoft's 2024 Work Trend Index found employees are interrupted every two minutes during core work hours, corroborating the broader fragmentation thesis with a more recent measurement.</li>
+  <li id="fn-mark2005">Harold, G., González, V. M., &amp; Harris, J. "No Task Left Behind? Examining the Nature of Fragmented Work." <em>CHI 2005.</em> The "23 minutes 15 seconds" figure measures average time until an interrupted task is resumed, with workers handling roughly two intervening tasks before returning. Often misattributed to the same authors' 2008 paper "The Cost of Interrupted Work: More Speed and Stress." Microsoft's 2024 Work Trend Index found employees are interrupted every two minutes during core work hours, corroborating the broader fragmentation thesis with a more recent measurement.</li>
   <li id="fn-mck">McKinsey Global Institute, "The Social Economy: Unlocking value and productivity through social technologies" (2012). Interaction workers spend 19% of their workweek looking for information and 28% managing email.</li>
   <li id="fn-pan">Panopto / YouGov, "Workplace Knowledge and Productivity Report" (2018). U.S. knowledge workers waste 5.3 hours per week on knowledge-finding inefficiency; 42% of institutional knowledge is unique to the individual; 81% of employees say experiential knowledge is the hardest to replace; the average large U.S. business loses $47M in productivity per year to inefficient knowledge sharing.</li>
   <li id="fn-shrm">Society for Human Resource Management, "The Myth of Replaceability: Preparing for the Loss of Key Employees." Replacing a knowledge worker costs 50–200% of annual salary depending on level and specialization, with rebuilding institutional context being a meaningful share of the cost.</li>

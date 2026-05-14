@@ -31,7 +31,7 @@ The AI hype cycle has not solved this. The pilots most companies are running don
 
 The fix is not another wiki. Not another chatbot. Not another search index. It is an *organizational knowledge library* — what we call a **memory network**. A graph of the people, accounts, meetings, decisions, risks, and artifacts that make up how your company actually operates.
 
-A keyword search for "personas" in our Box returns tens of thousands of matches. Our memory network returns *the three slides Bill showed Larry's team in March, the action item Larry pushed back on, and the follow-up Mark sent that closed the loop.* That's the difference between *retrieval* and *recall*, and it's the difference between AI that is useful and AI that is a demo.
+A keyword search for "personas" in our Box returns tens of thousands of matches. Our memory network returns *the three slides Walter showed Larry's team in March, the action item Larry pushed back on, and the follow-up Harold sent that closed the loop.* That's the difference between *retrieval* and *recall*, and it's the difference between AI that is useful and AI that is a demo.
 
 This paper makes the case for building that memory layer first. Not in twelve months. Not as part of a transformation. This quarter, on one workflow, with the data you already have. Once you have it, every subsequent AI investment compounds against it. Without it, your AI strategy is a Sherpa who has never been on the mountain.
 
@@ -97,7 +97,7 @@ We call that layer a **memory network**. The rest of this paper is about why it 
 
 Humans don't search. They remember.
 
-That sounds like a small distinction. It isn't. Search returns a list of documents. Memory returns an *answer.* When you ask a tenured colleague "what happened with the Acme renewal?", they don't hand you a folder of files. They tell you a story: *Acme got nervous about pricing in January, Bill flew out to meet with their CFO, we agreed to a multi-year structure, Larry signed off in March.* That story is assembled in the moment from facts the colleague has connected over time.
+That sounds like a small distinction. It isn't. Search returns a list of documents. Memory returns an *answer.* When you ask a tenured colleague "what happened with the Acme renewal?", they don't hand you a folder of files. They tell you a story: *Acme got nervous about pricing in January, Walter flew out to meet with their CFO, we agreed to a multi-year structure, Larry signed off in March.* That story is assembled in the moment from facts the colleague has connected over time.
 
 That's recall. And recall has structure.
 
@@ -107,9 +107,9 @@ Every fact your organization knows can be reduced to a sentence of the form:
 
 > *Someone* (or *something*) **did something** to (or with, or about) *someone else,* on some *date,* and you can find evidence of it in *some artifact.*
 
-- *Bill* **committed-to** *the action item from the April 12 Acme call.*
+- *Walter* **committed-to** *the action item from the April 12 Acme call.*
 - *Larry* **is-account-rep-for** *First Federal.*
-- *Mark* **raised-a-risk** about *the Northwind contract on the May 3 Slack thread.*
+- *Harold* **raised-a-risk** about *the Northwind contract on the May 3 Slack thread.*
 - *The Acme renewal decision* **was-made-on** *April 28, in the executive review meeting.*
 
 Each sentence has the same structure: two **entities** (people, companies, projects, deals, products, meetings) and one named **relationship** that connects them (worked-on, decided, opposed, owns, is-account-rep-for, attended, raised-as-risk). String enough of those sentences together and you have a *graph*: a network of facts where any fact can be traversed to its neighbors.
@@ -222,9 +222,9 @@ The fastest way to feel the difference is to compare the same question against k
 - **Keyword search**: maybe an org chart from 2022. Maybe a CRM record that's three roles out of date.
 - **Memory network**: the current rep, when they last spoke to the customer, what was discussed, the next scheduled touchpoint, and any sentiment flags from the last call.
 
-### "What happened between Bill and Larry on the Acme renewal?"
+### "What happened between Walter and Larry on the Acme renewal?"
 
-- **Keyword search**: literally nothing useful. There is no document called "what happened between Bill and Larry."
+- **Keyword search**: literally nothing useful. There is no document called "what happened between Walter and Larry."
 - **Memory network**: a chronological thread of every meeting, email, and Slack exchange the two of them had about Acme, plus the decisions that came out of each.
 
 ### "What do we know about Vendor X?"
@@ -242,10 +242,10 @@ The fastest way to feel the difference is to compare the same question against k
 - **Keyword search**: nothing time-aware. You'll get equally weighted results from this week and from 2023.
 - **Memory network**: the most recent meeting summary, the current pipeline stage, current blockers, and the next step's owner.
 
-### "What did Bill commit to last week?"
+### "What did Walter commit to last week?"
 
 - **Keyword search**: impossible. There is no index of "things people committed to."
-- **Memory network**: a list of activities Bill committed to or completed last week, grouped by source meeting, status-tracked, with the relevant transcript snippet for each.
+- **Memory network**: a list of activities Walter committed to or completed last week, grouped by source meeting, status-tracked, with the relevant transcript snippet for each.
 
 The pattern across all of these: the memory network answers the question *as a person would*, not as a search engine does. It surfaces the right facts, with their context, with their source. The user doesn't get a stack of documents to wade through. They get an answer they can act on, with a way to verify it.
 
@@ -276,7 +276,7 @@ The pipeline has six stages.
                   │
                   ▼
    ┌────────────────────────────────┐
-   │  3. RESOLVE  to canonical IDs  │  ← "Bill" = "Bill P" = <@U03J5>
+   │  3. RESOLVE  to canonical IDs  │  ← "Walter" = "Walter P" = <@U03J5>
    └────────────────────────────────┘
                   │
                   ▼
@@ -309,17 +309,17 @@ This is where most of the "is this even feasible?" gets answered. Two years ago,
 
 ### 3. Resolve
 
-Extracted mentions become canonical entities. *Bill,* *Bill P,* *William Piacitelli,* and the Slack ID *<@U03J5>* all collapse to the same person. *Acme,* *Acme Corp,* and *Acme Corporation* all collapse to the same company. *April 12 retro* and *the meeting last Thursday* are the same event.
+Extracted mentions become canonical entities. *Walter,* *Walter P,* *Walter Pendragon,* and the Slack ID *<@U03J5>* all collapse to the same person. *Acme,* *Acme Corp,* and *Acme Corporation* all collapse to the same company. *April 12 retro* and *the meeting last Thursday* are the same event.
 
-This step, **entity resolution**, is where most homegrown attempts fall apart. The naive approach (string matching) breaks immediately on initials, misspellings, and email addresses. The right approach is layered. Deterministic rules for the easy cases (exact-match emails, normalized domain names). Vector-embedding similarity for the medium cases (fuzzy name matches). LLM tie-breaks for the hard cases ("is Bill from the customer team the same person as Bill P from sales?"). It is unglamorous engineering and it is the part you cannot skip.
+This step, **entity resolution**, is where most homegrown attempts fall apart. The naive approach (string matching) breaks immediately on initials, misspellings, and email addresses. The right approach is layered. Deterministic rules for the easy cases (exact-match emails, normalized domain names). Vector-embedding similarity for the medium cases (fuzzy name matches). LLM tie-breaks for the hard cases ("is Walter from the customer team the same person as Walter P from sales?"). It is unglamorous engineering and it is the part you cannot skip.
 
 ### 4. Connect
 
 Resolved entities get linked together by **named relationships**, which form the edges of the graph.
 
-> *Bill → committed-to → action-item-2026-04-12-#3*
+> *Walter → committed-to → action-item-2026-04-12-#3*
 > *Larry → is-account-rep-for → First Federal*
-> *Mark → raised-as-risk → contract-northwind-payment-terms*
+> *Harold → raised-as-risk → contract-northwind-payment-terms*
 
 The graph grows with every meeting, every doc, every thread. New relationships can be proposed by the LLM as new patterns appear ("co-presented-with," "escalated-to," "blocked-by") and curated by a human before they enter the schema. The system does not require you to design the entire vocabulary up front. It lets the schema *emerge* from the work.
 
@@ -339,7 +339,7 @@ This is structurally different from the RAG architecture we described in §1. A 
 
 - **Capture** because you can't remember what you didn't record.
 - **Extract** because raw transcripts and documents are not searchable as facts.
-- **Resolve** because "Bill" and "Bill P" need to be the same Bill.
+- **Resolve** because "Walter" and "Walter P" need to be the same Walter.
 - **Connect** because facts in isolation are trivia; facts in a graph are knowledge.
 - **Traceability and Trust** because users won't act on answers they can't check.
 - **Query** because the whole point is that someone (human or agent) gets the answer.
@@ -370,7 +370,7 @@ We deploy the same memory network three different ways at Cortado, and which one
 
 If your team includes engineers, analysts, or AI-native power users (people already running Claude Code, Cursor, or custom agent stacks), the right surface is a **Model Context Protocol (MCP) server.** MCP is the de facto standard for letting AI agents discover and call external tools. It was introduced by Anthropic in November 2024,[^mcpintro] adopted by OpenAI across the Agents SDK and ChatGPT desktop in March 2025,[^mcpopenai] and donated to a Linux Foundation–affiliated foundation in December 2025 with Google, Microsoft, AWS, Cloudflare, and Bloomberg as founding members.[^mcpfoundation] Thirteen months from announcement to neutrally-governed industry standard is the kind of momentum you only get when the alternative is everyone building the same plumbing themselves.
 
-An MCP server in front of your memory network lets any compliant AI agent query the graph as a first-class tool: *give me the open risks on Acme,* *find the last interaction with First Federal,* *summarize what Bill committed to last week.*
+An MCP server in front of your memory network lets any compliant AI agent query the graph as a first-class tool: *give me the open risks on Acme,* *find the last interaction with First Federal,* *summarize what Walter committed to last week.*
 
 This is the right answer for the people who already know what an MCP is and want it. **It is the wrong answer for everyone else.**
 
@@ -484,7 +484,7 @@ Build the memory first.
 
 ## Citations
 
-[^mark2005]: Mark, G., González, V. M., & Harris, J. "No Task Left Behind? Examining the Nature of Fragmented Work." *CHI 2005.* The "23 minutes 15 seconds" figure measures average time until an interrupted task is resumed, with workers handling roughly two intervening tasks before returning. Often misattributed to the same authors' 2008 paper "The Cost of Interrupted Work: More Speed and Stress." Microsoft's 2024 Work Trend Index found employees are interrupted every two minutes during core work hours, corroborating the broader fragmentation thesis with a more recent measurement.
+[^mark2005]: Harold, G., González, V. M., & Harris, J. "No Task Left Behind? Examining the Nature of Fragmented Work." *CHI 2005.* The "23 minutes 15 seconds" figure measures average time until an interrupted task is resumed, with workers handling roughly two intervening tasks before returning. Often misattributed to the same authors' 2008 paper "The Cost of Interrupted Work: More Speed and Stress." Microsoft's 2024 Work Trend Index found employees are interrupted every two minutes during core work hours, corroborating the broader fragmentation thesis with a more recent measurement.
 
 [^mckinsey2012]: McKinsey Global Institute, "The Social Economy: Unlocking value and productivity through social technologies" (2012). The original report estimated that interaction workers spend 19% of their workweek looking for information and 28% managing email.
 
