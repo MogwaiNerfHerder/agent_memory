@@ -533,7 +533,7 @@
   <li><em>Mark</em> <strong>raised-a-risk</strong> about <em>the Northwind contract on the May 3 Slack thread.</em></li>
   <li><em>The Acme renewal decision</em> <strong>was-made-on</strong> <em>April 28, in the executive review meeting.</em></li>
 </ul>
-<p>Each sentence has the same structure: two <strong>entities</strong> (people, companies, projects, deals, products, meetings) and one <strong>predicate</strong> that connects them (worked-on, decided, opposed, owns, is-account-rep-for, attended, raised-as-risk). String enough of those sentences together and you have a <em>graph</em>: a network of facts where any fact can be traversed to its neighbors.</p>
+<p>Each sentence has the same structure: two <strong>entities</strong> (people, companies, projects, deals, products, meetings) and one named <strong>relationship</strong> that connects them (worked-on, decided, opposed, owns, is-account-rep-for, attended, raised-as-risk). String enough of those sentences together and you have a <em>graph</em>: a network of facts where any fact can be traversed to its neighbors.</p>
 <p><strong>That graph is the memory.</strong></p>
 
 <h3>Why this is different from a wiki</h3>
@@ -550,7 +550,7 @@
   <li><strong>"From the company's own meetings, documents, and interactions."</strong> It is built from data you are already generating. No new collection effort.</li>
   <li><strong>"Every fact citable back to its source."</strong> Every claim in the memory points to the meeting transcript, document, or message that produced it. There is always a <em>you can see for yourself.</em> This matters for trust, for compliance, and for the moments when the AI is wrong. The AI will sometimes be wrong.</li>
 </ul>
-<p>That third property, <strong>citation-by-default</strong>, is the difference between a memory network and a chatbot that says confident things. We'll come back to it in §5 when we describe how the work gets done.</p>
+<p>That third property, <strong>traceability-by-default</strong>, is the difference between a memory network and a chatbot that says confident things. We'll come back to it in §5 when we describe how the work gets done.</p>
 </section>
 
 <!-- §3 -->
@@ -818,16 +818,16 @@
       <circle cx="62" cy="254" r="13" fill="#97D700"/>
       <text x="62" y="259" font-size="14" font-weight="800" fill="#051C2C">4</text>
       <text x="142" y="259" font-size="15" font-weight="800" fill="#FFFFFF">CONNECT</text>
-      <text x="130" y="281" font-size="11.5" fill="#FFFFFF">predicates =</text>
-      <text x="130" y="296" font-size="11.5" fill="#FFFFFF">edges of the graph</text>
+      <text x="130" y="281" font-size="11.5" fill="#FFFFFF">named relationships</text>
+      <text x="130" y="296" font-size="11.5" fill="#FFFFFF">= edges of the graph</text>
     </g>
     <g>
       <rect x="270" y="230" width="180" height="78" fill="#8FC986" rx="4"/>
       <circle cx="292" cy="254" r="13" fill="#051C2C"/>
       <text x="292" y="259" font-size="14" font-weight="800" fill="#97D700">5</text>
-      <text x="372" y="259" font-size="15" font-weight="800" fill="#051C2C">CITE</text>
-      <text x="360" y="281" font-size="11.5" fill="#051C2C">every fact points</text>
-      <text x="360" y="296" font-size="11.5" fill="#051C2C">to its source</text>
+      <text x="372" y="259" font-size="15" font-weight="800" fill="#051C2C">TRUST</text>
+      <text x="360" y="281" font-size="11.5" fill="#051C2C">every fact traces</text>
+      <text x="360" y="296" font-size="11.5" fill="#051C2C">back to its source</text>
     </g>
     <g>
       <rect x="500" y="230" width="180" height="78" fill="#97D700" rx="4"/>
@@ -863,17 +863,17 @@
 <p>This step, <strong>entity resolution</strong>, is where most homegrown attempts fall apart. The naive approach (string matching) breaks immediately on initials, misspellings, and email addresses. The right approach is layered. Deterministic rules for the easy cases (exact-match emails, normalized domain names). Vector-embedding similarity for the medium cases (fuzzy name matches). LLM tie-breaks for the hard cases ("is Bill from the customer team the same person as Bill P from sales?"). It is unglamorous engineering and it is the part you cannot skip.</p>
 
 <h3>4. Connect</h3>
-<p>Resolved entities become <strong>predicates</strong>: typed relationships that form the edges of the graph.</p>
+<p>Resolved entities get linked together by <strong>named relationships</strong>, which form the edges of the graph.</p>
 <div class="pullquote">
   <em>Bill</em> → <strong>committed-to</strong> → <em>action-item-2026-04-12-#3</em><br>
   <em>Larry</em> → <strong>is-account-rep-for</strong> → <em>First Federal</em><br>
   <em>Mark</em> → <strong>raised-as-risk</strong> → <em>contract-northwind-payment-terms</em>
 </div>
-<p>The graph grows with every meeting, every doc, every thread. New predicates can be proposed by the LLM as new patterns appear ("co-presented-with," "escalated-to," "blocked-by") and curated by a human before they enter the schema. The system does not require you to design the entire ontology up front. It lets the schema <em>emerge</em> from the work.</p>
+<p>The graph grows with every meeting, every doc, every thread. New relationships can be proposed by the LLM as new patterns appear ("co-presented-with," "escalated-to," "blocked-by") and curated by a human before they enter the schema. The system does not require you to design the entire vocabulary up front. It lets the schema <em>emerge</em> from the work.</p>
 
-<h3>5. Cite</h3>
+<h3>5. Traceability and Trust</h3>
 <p>Every fact in the graph carries a pointer back to its source. Every action item points to the meeting transcript timecode where it was committed. Every risk points to the message that raised it. Every decision points to the deck where the alternatives were laid out.</p>
-<p>This <strong>citation-by-default</strong> property is the difference between a memory network and a chatbot that says confident things. When the AI is right, citations let users verify quickly. When the AI is wrong (and it will sometimes be wrong) citations let users see <em>why</em> and correct the underlying source. <strong>Provenance is non-negotiable.</strong> Without it, the system is a confident stranger. With it, the system is a librarian.</p>
+<p>This is the property that separates a memory network from a chatbot that says confident things. When the AI is right, traceability lets users verify in one click. When the AI is wrong (and it will sometimes be wrong) traceability lets users see <em>why</em> and correct the underlying source. <strong>Trust is earned by being checkable, not by being confident.</strong> Without traceability, the system is a confident stranger. With it, the system is a librarian.</p>
 
 <h3>6. Query</h3>
 <p>When a person (or another AI) asks a question, the system traverses the graph, assembles relevant facts, and hands them to an LLM with a single instruction: <em>compose the answer, cite every fact.</em> The LLM does not "know" the answer in the sense that it pulls it from training data. It <em>reads the memory</em> and reports back.</p>
@@ -885,7 +885,7 @@
   <li><strong>Extract</strong> because raw transcripts and documents are not searchable as facts.</li>
   <li><strong>Resolve</strong> because "Bill" and "Bill P" need to be the same Bill.</li>
   <li><strong>Connect</strong> because facts in isolation are trivia; facts in a graph are knowledge.</li>
-  <li><strong>Cite</strong> because trust requires verifiability.</li>
+  <li><strong>Traceability and Trust</strong> because users won't act on answers they can't check.</li>
   <li><strong>Query</strong> because the whole point is that someone (human or agent) gets the answer.</li>
 </ul>
 
@@ -943,7 +943,7 @@
 <p><strong>It does not make decisions.</strong> It surfaces context, options, history, and risks. A human still picks. The system can tell you what happened and what's at stake. It does not tell you what to do.</p>
 <p><strong>It does not eliminate the need for good processes.</strong> A perfect memory of a bad workflow is still a bad workflow. If your sales team doesn't take notes, the memory network will faithfully capture the absence of notes. Garbage in, garbage out. The LLM era did not change that.</p>
 <p><strong>It is not a single-vendor product purchase.</strong> It is a layer you build on top of your existing stack. You will still own the schema, the entity-resolution rules, and the question of which artifacts you ingest. There is no "buy a memory network" SKU. There is only "build one, with these well-understood components."</p>
-<p><strong>It is not "done."</strong> The memory grows for as long as the company runs. Plan for ongoing curation: schema additions, entity-merge corrections, predicate cleanup. Budget for it the way you budget for a CRM administrator: small, ongoing, indispensable.</p>
+<p><strong>It is not "done."</strong> The memory grows for as long as the company runs. Plan for ongoing curation: schema additions, entity-merge corrections, relationship cleanup. Budget for it the way you budget for a CRM administrator: small, ongoing, indispensable.</p>
 <p><strong>It does not replace structured systems.</strong> Your CRM is still your CRM. Your ERP is still your ERP. The memory network <em>connects</em> what those systems know with what your meetings, documents, and threads know. It is a layer, not a replacement.</p>
 <p><strong>The schema-design conversations will be contentious in your first month.</strong> Deciding what counts as an "account," whether "engagement" is one entity or four, who owns the definition of "renewal at risk" — these are the same kinds of arguments your CRM administrator and your sales-ops team have been having for years. The memory network surfaces them again, on a fresh canvas, and you have to settle them. Plan for two weeks of debates that feel like they're slowing you down. They aren't slowing you down; they're the actual work.</p>
 <p>Naming these limits up front is not modesty. It's the only way to keep the conversation honest with the executive who has been burned by previous AI promises. We've found that the people who push back hardest on a memory network usually do so because the <em>last</em> AI vendor they bought from oversold. Saying out loud what the system isn't makes it easier for the listener to believe what it is.</p>
@@ -963,7 +963,7 @@
 <p>For the workflow you picked in step 1, identify the three to five sources that contain the relevant context. That's the corpus.</p>
 
 <h3>3. Build memory for that workflow first</h3>
-<p>Define the entities (people, accounts, deals, projects). Define the predicates (works-on, attended, decided, raised-risk). Run the extraction pipeline against the corpus from step 2. Stand up the resolution rules, the citation system, and the query interface. Six weeks, not six quarters, with the right team.</p>
+<p>Define the entities (people, accounts, deals, projects). Define the relationships (works-on, attended, decided, raised-risk). Run the extraction pipeline against the corpus from step 2. Stand up the resolution rules, the citation system, and the query interface. Six weeks, not six quarters, with the right team.</p>
 <p>The team is small: one engineer, one product person, one domain expert from the workflow you picked. Not a transformation office.</p>
 
 <h3>4. Distribute it where the users already are</h3>
@@ -971,7 +971,7 @@
 
 <h3>5. Measure the question, not the system</h3>
 <p>The right metric is not "queries per day" or "uptime." It is <em>did the user trust the answer enough to act on it.</em> Track time-to-answer, accuracy on a sample of queries, and how often the user clicks through to verify against the cited source. Those three numbers tell you whether the system is earning trust.</p>
-<p>When the answer is yes (usually within four to eight weeks) you expand. The second workflow is half-built; most of the entities, predicates, and infrastructure carry over. The third workflow is mostly free. The graph compounds. So does the value.</p>
+<p>When the answer is yes (usually within four to eight weeks) you expand. The second workflow is half-built; most of the entities, relationships, and infrastructure carry over. The third workflow is mostly free. The graph compounds. So does the value.</p>
 
 <div class="pullquote"><strong>Don't buy a chatbot. Build memory. Then everything else gets cheaper, faster, and more credible.</strong></div>
 </section>

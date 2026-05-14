@@ -112,7 +112,7 @@ Every fact your organization knows can be reduced to a sentence of the form:
 - *Mark* **raised-a-risk** about *the Northwind contract on the May 3 Slack thread.*
 - *The Acme renewal decision* **was-made-on** *April 28, in the executive review meeting.*
 
-Each sentence has the same structure: two **entities** (people, companies, projects, deals, products, meetings) and one **predicate** that connects them (worked-on, decided, opposed, owns, is-account-rep-for, attended, raised-as-risk). String enough of those sentences together and you have a *graph*: a network of facts where any fact can be traversed to its neighbors.
+Each sentence has the same structure: two **entities** (people, companies, projects, deals, products, meetings) and one named **relationship** that connects them (worked-on, decided, opposed, owns, is-account-rep-for, attended, raised-as-risk). String enough of those sentences together and you have a *graph*: a network of facts where any fact can be traversed to its neighbors.
 
 That graph is the memory.
 
@@ -136,7 +136,7 @@ Three things to notice in that definition:
 - **"From the company's own meetings, documents, and interactions."** It is built from data you are already generating. No new collection effort.
 - **"Every fact citable back to its source."** Every claim in the memory points to the meeting transcript, document, or message that produced it. There is always a *you can see for yourself.* This matters for trust, for compliance, and for the moments when the AI is wrong. The AI will sometimes be wrong.
 
-That third property, **citation-by-default**, is the difference between a memory network and a chatbot that says confident things. We'll come back to it in §5 when we describe how the work gets done.
+That third property, **traceability-by-default**, is the difference between a memory network and a chatbot that says confident things. We'll come back to it in §5 when we describe how the work gets done.
 
 ---
 
@@ -281,12 +281,12 @@ The pipeline has six stages.
                   │
                   ▼
    ┌────────────────────────────────┐
-   │  4. CONNECT  via predicates    │  ← entities + relationships → graph
+   │  4. CONNECT  via relationships │  ← entities + edges → a graph
    └────────────────────────────────┘
                   │
                   ▼
    ┌────────────────────────────────┐
-   │  5. CITE  every fact to source │  ← provenance is non-negotiable
+   │  5. TRUST  trace every fact    │  ← every claim links to its source
    └────────────────────────────────┘
                   │
                   ▼
@@ -315,19 +315,19 @@ This step, **entity resolution**, is where most homegrown attempts fall apart. T
 
 ### 4. Connect
 
-Resolved entities become **predicates**: typed relationships that form the edges of the graph.
+Resolved entities get linked together by **named relationships**, which form the edges of the graph.
 
 > *Bill → committed-to → action-item-2026-04-12-#3*
 > *Larry → is-account-rep-for → First Federal*
 > *Mark → raised-as-risk → contract-northwind-payment-terms*
 
-The graph grows with every meeting, every doc, every thread. New predicates can be proposed by the LLM as new patterns appear ("co-presented-with," "escalated-to," "blocked-by") and curated by a human before they enter the schema. The system does not require you to design the entire ontology up front. It lets the schema *emerge* from the work.
+The graph grows with every meeting, every doc, every thread. New relationships can be proposed by the LLM as new patterns appear ("co-presented-with," "escalated-to," "blocked-by") and curated by a human before they enter the schema. The system does not require you to design the entire vocabulary up front. It lets the schema *emerge* from the work.
 
-### 5. Cite
+### 5. Traceability and Trust
 
 Every fact in the graph carries a pointer back to its source. Every action item points to the meeting transcript timecode where it was committed. Every risk points to the message that raised it. Every decision points to the deck where the alternatives were laid out.
 
-This **citation-by-default** property is the difference between a memory network and a chatbot that says confident things. When the AI is right, citations let users verify quickly. When the AI is wrong (and it will sometimes be wrong) citations let users see *why* and correct the underlying source. Provenance is non-negotiable. Without it, the system is a confident stranger. With it, the system is a librarian.
+This is the property that separates a memory network from a chatbot that says confident things. When the AI is right, traceability lets users verify in one click. When the AI is wrong (and it will sometimes be wrong) traceability lets users see *why* and correct the underlying source. **Trust is earned by being checkable, not by being confident.** Without traceability, the system is a confident stranger. With it, the system is a librarian.
 
 ### 6. Query
 
@@ -341,7 +341,7 @@ This is structurally different from the RAG architecture we described in §1. A 
 - **Extract** because raw transcripts and documents are not searchable as facts.
 - **Resolve** because "Bill" and "Bill P" need to be the same Bill.
 - **Connect** because facts in isolation are trivia; facts in a graph are knowledge.
-- **Cite** because trust requires verifiability.
+- **Traceability and Trust** because users won't act on answers they can't check.
 - **Query** because the whole point is that someone (human or agent) gets the answer.
 
 ### The honest part
@@ -416,7 +416,7 @@ We have not seen a piece of enterprise software work as advertised, and we are n
 
 **It is not a single-vendor product purchase.** It is a layer you build on top of your existing stack. You will still own the schema, the entity-resolution rules, and the question of which artifacts you ingest. There is no "buy a memory network" SKU. There is only "build one, with these well-understood components."
 
-**It is not "done."** The memory grows for as long as the company runs. Plan for ongoing curation: schema additions, entity-merge corrections, predicate cleanup. Budget for it the way you budget for a CRM administrator: small, ongoing, indispensable.
+**It is not "done."** The memory grows for as long as the company runs. Plan for ongoing curation: schema additions, entity-merge corrections, relationship cleanup. Budget for it the way you budget for a CRM administrator: small, ongoing, indispensable.
 
 **It does not replace structured systems.** Your CRM is still your CRM. Your ERP is still your ERP. The memory network *connects* what those systems know with what your meetings, documents, and threads know. It is a layer, not a replacement.
 
@@ -444,7 +444,7 @@ For the workflow you picked in step 1, identify the three to five sources that c
 
 ### 3. Build memory for that workflow first
 
-Define the entities (people, accounts, deals, projects). Define the predicates (works-on, attended, decided, raised-risk). Run the extraction pipeline against the corpus from step 2. Stand up the resolution rules, the citation system, and the query interface. Six weeks, not six quarters, with the right team.
+Define the entities (people, accounts, deals, projects). Define the relationships (works-on, attended, decided, raised-risk). Run the extraction pipeline against the corpus from step 2. Stand up the resolution rules, the citation system, and the query interface. Six weeks, not six quarters, with the right team.
 
 The team is small: one engineer, one product person, one domain expert from the workflow you picked. Not a transformation office.
 
@@ -456,7 +456,7 @@ Pick the surface from §6 that matches your users. If the workflow's users are t
 
 The right metric is not "queries per day" or "uptime." It is *did the user trust the answer enough to act on it.* Track time-to-answer, accuracy on a sample of queries, and how often the user clicks through to verify against the cited source. Those three numbers tell you whether the system is earning trust.
 
-When the answer is yes (usually within four to eight weeks) you expand. The second workflow is half-built; most of the entities, predicates, and infrastructure carry over. The third workflow is mostly free. The graph compounds. So does the value.
+When the answer is yes (usually within four to eight weeks) you expand. The second workflow is half-built; most of the entities, relationships, and infrastructure carry over. The third workflow is mostly free. The graph compounds. So does the value.
 
 ### The headline
 
