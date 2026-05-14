@@ -303,7 +303,7 @@ This is where most of the "is this even feasible?" gets answered. Two years ago,
 
 ### 3. Resolve
 
-Extracted mentions become canonical entities. *Walter,* *Walter P,* *Walter Pendragon,* and the Slack ID *<@U03J5>* all collapse to the same person. *Acme,* *Acme Corp,* and *Acme Corporation* all collapse to the same company. *April 12 retro* and *the meeting last Thursday* are the same event.
+Extracted mentions become canonical entities. The scale of this problem in a typical organization is brutal. In our own data — and we are an *unusually disciplined* shop — a single client contact routinely shows up as **four contact records in Salesforce, three in Hubspot, two more under different company names in the project manifest, and 32 distinct monikers in meeting transcripts** ("Walter Pendragon," "Walter P," "Walt," "their CIO," "the customer-side tech lead," the Slack ID `<@U03J5>`, and so on). All the same person. *Acme,* *Acme Corp,* and *Acme Corporation* are the same company. *April 12 retro* and *the meeting last Thursday* are the same event. The memory network collapses every one of these into one canonical entity, and remembers all the aliases so any future mention finds the right node.
 
 This step, **entity resolution**, is where most homegrown attempts fall apart. The naive approach (string matching) breaks immediately on initials, misspellings, and email addresses. The right approach is layered. Deterministic rules for the easy cases (exact-match emails, normalized domain names). Vector-embedding similarity for the medium cases (fuzzy name matches). LLM tie-breaks for the hard cases ("is Walter from the customer team the same person as Walter P from sales?"). It is unglamorous engineering and it is the part you cannot skip.
 
