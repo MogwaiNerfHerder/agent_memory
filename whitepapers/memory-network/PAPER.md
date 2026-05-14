@@ -444,7 +444,7 @@ For the workflow you picked in step 1, identify the three to five sources that c
 
 ### 3. Build memory for that workflow first
 
-Define the entities (people, accounts, deals, projects). Define the relationships (works-on, attended, decided, raised-risk). Run the extraction pipeline against the corpus from step 2. Stand up the resolution rules, the citation system, and the query interface. Six weeks, not six quarters, with the right team.
+Define the entities (people, accounts, deals, projects). Define the relationships (works-on, attended, decided, raised-risk). Run the extraction pipeline against the corpus from step 2. Stand up the resolution rules, the traceability system, and the query interface. Six weeks, not six quarters, with the right team.
 
 The team is small: one engineer, one product person, one domain expert from the workflow you picked. Not a transformation office.
 
