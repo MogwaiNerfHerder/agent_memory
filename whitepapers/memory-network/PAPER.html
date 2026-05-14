@@ -860,6 +860,8 @@
 <h3>3. Resolve</h3>
 <p>Extracted mentions become canonical entities. The scale of this problem in a typical organization is brutal. In our own data — and we are an <em>unusually disciplined</em> shop — a single client contact routinely shows up as <strong>four contact records in Salesforce, three in Hubspot, two more under different company names in the project manifest, and 32 distinct monikers in meeting transcripts</strong> ("Walter Pendragon," "Walter P," "Walt," "their CIO," "the customer-side tech lead," the Slack ID <code>&lt;@U03J5&gt;</code>, and so on). All the same person. <em>Acme, Acme Corp,</em> and <em>Acme Corporation</em> are the same company. <em>April 12 retro</em> and <em>the meeting last Thursday</em> are the same event. The memory network collapses every one of these into one canonical entity, and remembers all the aliases so any future mention finds the right node.</p>
 
+<p>The byproduct is bigger than the memory network itself. <strong>Data nominalization and normalization is the unsexy, foundational discipline that makes <em>every</em> enterprise system work correctly</strong> — and the resolution analysis that powers the memory network is the same analysis that homogenizes your business objects across your CRM, your CRM-of-record, your project manifests, your billing, your support stack. Every system that has ever asked "is this the same Acme?" gets a single authoritative answer. Memory network resolution is master data management with the LLM doing the heavy lifting no junior data steward could afford to do at scale.</p>
+
 <div class="stat-row" style="grid-template-columns: repeat(4, 1fr);">
   <div class="stat" style="background: var(--cg-blue);">
     <span class="num" style="font-size: 32px;">4×</span>
