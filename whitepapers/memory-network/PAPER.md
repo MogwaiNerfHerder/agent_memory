@@ -3,7 +3,7 @@
 
 *A Cortado Group field report on the Data pillar of Innovation-as-a-Service*
 
-> **95% of organizations are getting zero return on their generative AI pilots.** The blocker is not the model. The model has no memory of your company. This paper is about fixing that.
+> **95% of organizations are getting zero return on their generative AI pilots.** The blocker isn't the AI. The AI has no memory of *your* company. This paper is about fixing that.
 >
 > *— framed by MIT NANDA, "The GenAI Divide: State of AI in Business 2025"*
 
@@ -31,7 +31,7 @@ Your organization knows tons of things. Nobody knows where any of it lives, or h
 
 Sit at your desk for a week and count how many times someone Slacks, emails, or pulls aside a colleague with some version of "hey, do you know where the…" Every one of those is a *double burn*. The asker spent ten or thirty minutes failing to find it before giving up. The person asked got pulled out of whatever they were doing to take a swing at the answer, often without actually knowing it either. Then both of them pay a 23-minute context-switch tax to get back to what they were doing. Multiply by your headcount. The bill is enormous, weekly, and invisible. It never shows up in any dashboard.
 
-The AI hype cycle has not solved this. The pilots most companies are running don't know your company any better than your search box does. The blocker isn't the model. The model has no memory of *you*.
+The AI hype cycle has not solved this. The pilots most companies are running don't know your company any better than your search box does. The blocker isn't the AI. The AI has no memory of *you*.
 
 The fix is not another wiki. Not another chatbot. Not another search index. It is an *organizational knowledge library* — what we call a **memory network**. A graph of the people, accounts, meetings, decisions, risks, and artifacts that make up how your company actually operates.
 
@@ -86,7 +86,7 @@ The natural response to "we can't find anything" has been to buy more search. It
 
 - **Keyword search** fails the moment the corpus gets large. A search for "Cortado Group personas" in our own Box returns tens of thousands of matching documents, every one that happens to contain those words. The right answer is in three slides that don't even have "personas" in the title.
 - **Federated search** across systems gives you more matches, not better ones. The number of false positives goes up linearly with the number of systems plumbed in.
-- **Vector or "semantic" search** is the upgrade most companies have already tried. It's the engine behind most enterprise AI chatbots, in an architecture pattern called **RAG** (retrieval-augmented generation: the chatbot looks up your documents, hands the relevant text to a large language model, and asks the model to compose an answer). RAG is a real improvement over keyword search, but it finds *similar text*, not *connected facts*. It can return a paragraph that sounds like it's about renewals; it cannot tell you *who decided what* about *which renewal* and *whether the customer agreed*. Microsoft Research, in its work on graph-based retrieval, named the failure plainly: "Baseline RAG struggles to connect the dots… when answering a question requires traversing disparate pieces of information through their shared attributes."[^msftgraphrag]
+- **Vector or "semantic" search** is the upgrade most companies have already tried. It's the engine behind most enterprise AI chatbots, in an architecture pattern called **RAG** (retrieval-augmented generation: the chatbot looks up your documents, hands the relevant text to a large language model, and asks it to compose an answer). RAG is a real improvement over keyword search, but it finds *similar text*, not *connected facts*. It can return a paragraph that sounds like it's about renewals; it cannot tell you *who decided what* about *which renewal* and *whether the customer agreed*. Microsoft Research, in its work on graph-based retrieval, named the failure plainly: "Baseline RAG struggles to connect the dots… when answering a question requires traversing disparate pieces of information through their shared attributes."[^msftgraphrag]
 - **Wikis and intranets** require humans to write down what they know. That's exactly the bottleneck the system is supposed to remove. The wiki you wish you had is the wiki nobody had time to write.
 
 ### Enter the organizational knowledge library
@@ -183,7 +183,7 @@ Every meeting Zoom records, every Slack thread your team writes, every doc your 
 
 The AI capabilities everyone actually wants (coaching, decision support, predictive risk, agentic workflows) all require institutional context. You cannot build them on top of nothing. Trying to is the technical equivalent of building the second floor before the first.
 
-We've watched companies pour budget into AI agents that are supposed to "handle the renewal pipeline" or "draft the customer brief," and we've watched those agents fail in production not because the model was bad but because *nobody told the agent what the customer was about.* The agent picked the wrong contact, repeated a question that had already been answered, or made a confident recommendation contradicted by the last three meetings. None of those failures are model failures. They are memory failures dressed up as model failures.
+We've watched companies pour budget into AI agents that are supposed to "handle the renewal pipeline" or "draft the customer brief," and we've watched those agents fail in production not because the AI was bad but because *nobody told the agent what the customer was about.* The agent picked the wrong contact, repeated a question that had already been answered, or made a confident recommendation contradicted by the last three meetings. None of those failures are AI failures. They are memory failures dressed up as AI failures.
 
 ### The maturity ladder
 
@@ -360,7 +360,7 @@ We are not selling something we wouldn't run on ourselves.
 
 *This section: the **People** pillar of Innovation-as-a-Service. The best Data and the cleanest Process create no value if they don't reach the right human in the form they'll actually use.*
 
-The single most common reason AI projects fail is not the model and not the data. It's that the *user* never adopts the tool. Asking a busy account manager to log into a new web app to ask a question is asking them to fail. Memory networks live or die on distribution.
+The single most common reason AI projects fail is not the AI and not the data. It's that the *user* never adopts the tool. Asking a busy account manager to log into a new web app to ask a question is asking them to fail. Memory networks live or die on distribution.
 
 The good news: a memory network is one thing built once. The way users access it should be matched to how technical those users are, not to what's interesting to your engineering team.
 
