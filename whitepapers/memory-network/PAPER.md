@@ -161,7 +161,7 @@ Every one of those use cases requires the AI to know what *you* know. Without me
 
 ### The Sherpa metaphor
 
-A Sherpa is not a guidebook. The guidebook is generic. The Sherpa has been on this mountain — they know which crevasses opened up last season, what your physiology can take because they walked behind you for three days. They don't summit *for* you. They *guide* you through terrain they already know intimately.[^sherpa]
+A Sherpa is not a guidebook. The guidebook is generic. The Sherpa has been on this mountain — they know which crevasses opened up last season, what your physiology can take because they walked behind you for three days. They don't summit *for* you. They *guide* you through terrain they already know intimately.
 
 That's what AI inside an organization should be. A guide that knows your mountain. Without organizational memory, you've hired a Sherpa who has never been on this mountain. Articulate, confident, useless.
 
@@ -505,8 +505,6 @@ Build the memory first.
 [^gartner30]: Gartner press release, "Gartner Predicts 30% of Generative AI Projects Will Be Abandoned After Proof of Concept by End of 2025" (July 2024). Cites poor data quality, inadequate risk controls, escalating costs, and unclear business value as root causes.
 
 [^bcg4]: BCG, "AI Adoption in 2024: 74% of Companies Struggle to Achieve and Scale Value" (Oct 2024). Only 26% have the capabilities to move beyond proofs of concept; only 4% are creating substantial value.
-
-[^sherpa]: We are not the first to use the Sherpa metaphor. Brett Hurt of data.world made a similar argument in a 2024 Medium post about context engines. We owe him the precedent and we believe the framing is the right one for institutional memory specifically.
 
 [^mcpintro]: Anthropic, "Introducing the Model Context Protocol" (Nov 25, 2024).
 
