@@ -155,7 +155,7 @@ Consider the AI use cases your team actually wants to deploy:
 - **Onboarding.** "What's the methodology for a discovery call?" The chatbot can give a generic answer. It cannot tell the new hire *how we do it here* unless someone fed it our methodology.
 - **Deal coaching.** "How should I handle this Acme objection?" The chatbot can give a generic playbook. It cannot tell the rep that *Acme has raised this exact objection twice before, and here's what worked.*
 - **Support triage.** "What's blocking ticket #4421?" The chatbot can summarize the ticket. It cannot tell the agent that *the customer's account rep flagged this as a renewal risk last week.*
-- **Executive briefings.** "Prepare me for my First Federal meeting." The chatbot can give you First Federal's Wikipedia entry. It cannot give you *the last three meetings, the open action items, the sentiment from the last call, and the topics that came up that we never followed up on.*
+- **Executive briefings.** "Prepare me for my First Federal meeting." The chatbot can give you First Federal's Wikipedia entry. It cannot give you *the last three meetings, the activities completed since the last touchpoint, the activities forecast for the coming weeks, the sentiment from the last call, and the topics that came up that we never followed up on.*
 
 Every one of those use cases requires the AI to know what *you* know. Without memory, every AI session starts from zero, and every user pays the full cost of pasting in context, explaining the players, attaching the relevant documents. After a few rounds the user gives up and goes back to asking a coworker. The AI joins the wiki in the graveyard of well-intentioned tools.
 
@@ -245,7 +245,7 @@ The fastest way to feel the difference is to compare the same question against k
 ### "What did Bill commit to last week?"
 
 - **Keyword search**: impossible. There is no index of "things people committed to."
-- **Memory network**: a list of action items grouped by source meeting, status-tracked, with the relevant transcript snippet for each.
+- **Memory network**: a list of activities Bill committed to or completed last week, grouped by source meeting, status-tracked, with the relevant transcript snippet for each.
 
 The pattern across all of these: the memory network answers the question *as a person would*, not as a search engine does. It surfaces the right facts, with their context, with their source. The user doesn't get a stack of documents to wade through. They get an answer they can act on, with a way to verify it.
 
@@ -303,7 +303,7 @@ This matters for two reasons. It removes the "we have to deploy new tools" objec
 
 ### 2. Extract
 
-Every captured artifact is read by a large language model with a fixed set of questions: *who was present? what was decided? what are the open action items? what entities were named? what risks were raised? what was the sentiment?* The model returns structured output (JSON, not prose) that downstream systems can ingest directly.
+Every captured artifact is read by a large language model with a fixed set of questions: *who was present? what was decided? what activities happened, and what's forecast next? what entities were named? what risks were raised? what was the sentiment?* The model returns structured output (JSON, not prose) that downstream systems can ingest directly.
 
 This is where most of the "is this even feasible?" gets answered. Two years ago, this step required custom-trained natural-language-processing models. Today, off-the-shelf LLMs (Claude, GPT, Gemini, and freely available open-source models like Llama and Mistral) handle it with high accuracy when given a tight schema and well-designed prompts. The math has changed. What used to take a team of NLP engineers and a six-figure annual budget can now be done with a few thousand dollars of API spend per month.
 
@@ -325,7 +325,7 @@ The graph grows with every meeting, every doc, every thread. New relationships c
 
 ### 5. Traceability and Trust
 
-Every fact in the graph carries a pointer back to its source. Every action item points to the meeting transcript timecode where it was committed. Every risk points to the message that raised it. Every decision points to the deck where the alternatives were laid out.
+Every fact in the graph carries a pointer back to its source. Every activity (completed or forecast) points to the meeting transcript timecode where it was committed. Every risk points to the message that raised it. Every decision points to the deck where the alternatives were laid out.
 
 This is the property that separates a memory network from a chatbot that says confident things. When the AI is right, traceability lets users verify in one click. When the AI is wrong (and it will sometimes be wrong) traceability lets users see *why* and correct the underlying source. **Trust is earned by being checkable, not by being confident.** Without traceability, the system is a confident stranger. With it, the system is a librarian.
 

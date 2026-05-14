@@ -574,7 +574,7 @@
   <li><strong>Onboarding.</strong> "What's the methodology for a discovery call?" The chatbot can give a generic answer. It cannot tell the new hire <em>how we do it here</em> unless someone fed it our methodology.</li>
   <li><strong>Deal coaching.</strong> "How should I handle this Acme objection?" The chatbot can give a generic playbook. It cannot tell the rep that <em>Acme has raised this exact objection twice before, and here's what worked.</em></li>
   <li><strong>Support triage.</strong> "What's blocking ticket #4421?" The chatbot can summarize the ticket. It cannot tell the agent that <em>the customer's account rep flagged this as a renewal risk last week.</em></li>
-  <li><strong>Executive briefings.</strong> "Prepare me for my First Federal meeting." The chatbot can give you First Federal's Wikipedia entry. It cannot give you <em>the last three meetings, the open action items, the sentiment from the last call, and the topics that came up that we never followed up on.</em></li>
+  <li><strong>Executive briefings.</strong> "Prepare me for my First Federal meeting." The chatbot can give you First Federal's Wikipedia entry. It cannot give you <em>the last three meetings, the activities completed since the last touchpoint, the activities forecast for the coming weeks, the sentiment from the last call, and the topics that came up that we never followed up on.</em></li>
 </ul>
 <p>Every one of those use cases requires the AI to know what <em>you</em> know. Without memory, every AI session starts from zero, and every user pays the full cost of pasting in context, explaining the players, attaching the relevant documents. After a few rounds the user gives up and goes back to asking a coworker. The AI joins the wiki in the graveyard of well-intentioned tools.</p>
 
@@ -732,7 +732,7 @@
 <p class="question">"What did Bill commit to last week?"</p>
 <div class="compare">
   <div class="ks"><span class="label">Keyword search</span>Impossible. There is no index of "things people committed to."</div>
-  <div class="mn"><span class="label">Memory network</span>A list of action items grouped by source meeting, status-tracked, with the relevant transcript snippet for each.</div>
+  <div class="mn"><span class="label">Memory network</span>A list of activities Bill committed to or completed last week, grouped by source meeting, status-tracked, with the relevant transcript snippet for each.</div>
 </div>
 
 <p>The pattern across all of these: the memory network answers the question <em>as a person would</em>, not as a search engine does. It surfaces the right facts, with their context, with their source. The user doesn't get a stack of documents to wade through. They get an answer they can act on, with a way to verify it.</p>
@@ -855,7 +855,7 @@
 <p>This matters for two reasons. It removes the "we have to deploy new tools" objection from every IT review, and it means the system is producing value from data you have already paid to capture.</p>
 
 <h3>2. Extract</h3>
-<p>Every captured artifact is read by a large language model with a fixed set of questions: <em>who was present? what was decided? what are the open action items? what entities were named? what risks were raised? what was the sentiment?</em> The model returns structured output (JSON, not prose) that downstream systems can ingest directly.</p>
+<p>Every captured artifact is read by a large language model with a fixed set of questions: <em>who was present? what was decided? what activities happened, and what's forecast next? what entities were named? what risks were raised? what was the sentiment?</em> The model returns structured output (JSON, not prose) that downstream systems can ingest directly.</p>
 <p>This is where most of the "is this even feasible?" gets answered. Two years ago, this step required custom-trained natural-language-processing models. Today, off-the-shelf LLMs (Claude, GPT, Gemini, and freely available open-source models like Llama and Mistral) handle it with high accuracy when given a tight schema and well-designed prompts. The math has changed. What used to take a team of NLP engineers and a six-figure annual budget can now be done with a few thousand dollars of API spend per month.</p>
 
 <h3>3. Resolve</h3>
@@ -872,7 +872,7 @@
 <p>The graph grows with every meeting, every doc, every thread. New relationships can be proposed by the LLM as new patterns appear ("co-presented-with," "escalated-to," "blocked-by") and curated by a human before they enter the schema. The system does not require you to design the entire vocabulary up front. It lets the schema <em>emerge</em> from the work.</p>
 
 <h3>5. Traceability and Trust</h3>
-<p>Every fact in the graph carries a pointer back to its source. Every action item points to the meeting transcript timecode where it was committed. Every risk points to the message that raised it. Every decision points to the deck where the alternatives were laid out.</p>
+<p>Every fact in the graph carries a pointer back to its source. Every activity (completed or forecast) points to the meeting transcript timecode where it was committed. Every risk points to the message that raised it. Every decision points to the deck where the alternatives were laid out.</p>
 <p>This is the property that separates a memory network from a chatbot that says confident things. When the AI is right, traceability lets users verify in one click. When the AI is wrong (and it will sometimes be wrong) traceability lets users see <em>why</em> and correct the underlying source. <strong>Trust is earned by being checkable, not by being confident.</strong> Without traceability, the system is a confident stranger. With it, the system is a librarian.</p>
 
 <h3>6. Query</h3>
