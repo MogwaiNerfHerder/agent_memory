@@ -348,11 +348,11 @@ The good news for an executive sponsor: every step in this pipeline is *staffabl
 
 We run this pipeline against our own organization. Two places we've felt the difference most:
 
-**Renewal scoping (SOW/SOR).** Building a renewal statement of work or statement of revisions used to mean a half-day excavation across Box: the original engagement scope, prior renewals, change orders, the meeting where pricing got revisited, the email where the customer asked for a new line of work. Four to six file locations, a quarter-day of clicking, and a meaningful chance of missing something. The same job now runs as a single query against our memory network. The system pulls the chain of decisions, who owned each one, what evidence backs each claim, and where the source lives. The renewal letter writes itself off the assembled facts.
+**SOWs and RFPs: days of work → minutes.** Building a renewal statement of work or responding to an RFP used to be a multi-day excavation across Box — the original engagement scope, prior renewals, change orders, the meeting where pricing got revisited, the email where the customer asked for a new line of work. Now the same job runs in minutes. A single query against the memory network assembles the chain of decisions, who owned each one, and where every claim's evidence lives. The deliverable writes itself off the assembled facts.
 
-**Project research.** Before, "what do we know about X?" meant pinging five to twenty people, pulling each of them out of focused work, waiting eight hours (or until tomorrow) for a partial answer threaded across DMs. That is the §1 double-burn at scale. Now the same question runs in seconds against the captured meetings and documents from the project, with the sources cited inline. Nobody else gets interrupted. The asker doesn't context-switch into the next thing and forget the question.
+**Comparative project research: hours → seconds.** Before, "what do we know about X?" or "how does this engagement compare to that one?" meant pinging five to twenty people, pulling each of them out of focused work, waiting hours (or until tomorrow) for a partial answer threaded across DMs. *That is the §1 double-burn at scale.* Now the same question runs in seconds against the captured meetings and documents, with the sources cited inline. Nobody else gets interrupted. The asker doesn't context-switch into the next thing and forget the question.
 
-We are not selling something we wouldn't run on ourselves.
+Every deliverable, every recurring pain — precisely mapped through semantic analysis of the work your organization is already doing.
 
 ---
 
