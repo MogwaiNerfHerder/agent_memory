@@ -3,6 +3,10 @@
 
 *A Cortado Group field report on the Data pillar of Innovation-as-a-Service*
 
+> **95% of organizations are getting zero return on their generative AI pilots.** The blocker is not the model. The model has no memory of your company. This paper is about fixing that.
+>
+> *— framed by MIT NANDA, "The GenAI Divide: State of AI in Business 2025"*
+
 ---
 
 ## Contents
@@ -232,16 +236,6 @@ The fastest way to feel the difference is to compare the same question against k
 - **Keyword search**: 400 contracts, half of which mention Vendor X in a footer.
 - **Memory network**: a relationship summary covering current contract status, internal advocates, prior issues, who owns the relationship, when the next renewal hits, and whether anyone has flagged concerns.
 
-### "Where did we land on the pricing question?"
-
-- **Keyword search**: a slide deck from August titled `Pricing-FINAL-FINAL-v7.pptx` and four others with similar names. Good luck.
-- **Memory network**: the actual decision, who made it, what alternatives were considered, who pushed back, and what the agreement was.
-
-### "What is the latest status of the Northwind opportunity?"
-
-- **Keyword search**: nothing time-aware. You'll get equally weighted results from this week and from 2023.
-- **Memory network**: the most recent meeting summary, the current pipeline stage, current blockers, and the next step's owner.
-
 ### "What did Walter commit to last week?"
 
 - **Keyword search**: impossible. There is no index of "things people committed to."
@@ -352,7 +346,13 @@ The good news for an executive sponsor: every step in this pipeline is *staffabl
 
 ### The Cortado proof point
 
-We run the pipeline above against our own organization. Every internal client meeting, every Slack thread in our shared channels, every working document gets captured, extracted, resolved, connected, cited, and queryable. *[PROOF POINT TO INSERT: a concrete before/after stat from Cortado's own use — e.g. "renewal-prep briefings that used to take 90 minutes of pulling threads from four systems are now a 30-second query," or "new-hire ramp on the consulting methodology dropped from 6 weeks to 2," or "the #ask-cortado Slack channel handled X questions last quarter that previously routed to senior leadership."]* Whatever number lands here — the point is that we are not selling something we wouldn't run on ourselves.
+We run this pipeline against our own organization. Two places we've felt the difference most:
+
+**Renewal scoping (SOW/SOR).** Building a renewal statement of work or statement of revisions used to mean a half-day excavation across Box: the original engagement scope, prior renewals, change orders, the meeting where pricing got revisited, the email where the customer asked for a new line of work. Four to six file locations, a quarter-day of clicking, and a meaningful chance of missing something. The same job now runs as a single query against our memory network. The system pulls the chain of decisions, who owned each one, what evidence backs each claim, and where the source lives. The renewal letter writes itself off the assembled facts.
+
+**Project research.** Before, "what do we know about X?" meant pinging five to twenty people, pulling each of them out of focused work, waiting eight hours (or until tomorrow) for a partial answer threaded across DMs. That is the §1 double-burn at scale. Now the same question runs in seconds against the captured meetings and documents from the project, with the sources cited inline. Nobody else gets interrupted. The asker doesn't context-switch into the next thing and forget the question.
+
+We are not selling something we wouldn't run on ourselves.
 
 ---
 
