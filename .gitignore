@@ -25,3 +25,7 @@ htmlcov/
 
 # Don't ignore the database - it's the product
 # !agent_memory.db
+
+# Project-specific batch-run artifacts (real extraction-derived content -- not for version control)
+batch50_guids.txt
+batch50_results.jsonl
