@@ -192,23 +192,33 @@ class GraphDB:
             raise SystemExit(f"No client with slug '{slug}'")
         return row[0], row[1]
 
-    def upsert_source_meeting(self, client_id, external_id, occurred_at):
+    def upsert_source_meeting(self, client_id, external_id, occurred_at,
+                               attribution_source="manual", attribution_confidence="certain"):
+        """attribution_source/attribution_confidence default to the previous
+        hardcoded values ('manual'/'certain') for callers that don't pass them,
+        but a caller that resolved this meeting's client via resolve_client.py
+        (direct account guid, attendee-domain match, or title-keyword match)
+        should pass through what that resolution actually found -- a
+        domain/keyword guess is not the same certainty as a direct account
+        link, and the schema already has the vocabulary
+        (lookup_attribution_source / lookup_identity_confidence) to say so."""
         url = f"https://cg.cortadogroup.ai/meetings/console/{external_id}/"
         existing = self.conn.execute(
             "SELECT source_meeting_id FROM source_meeting WHERE external_id=?", (external_id,)
         ).fetchone()
         if existing:
             self.conn.execute(
-                "UPDATE source_meeting SET client_id=?, occurred_at=?, url=? WHERE source_meeting_id=?",
-                (client_id, occurred_at, url, existing[0]),
+                """UPDATE source_meeting SET client_id=?, occurred_at=?, url=?,
+                       attribution_source=?, attribution_confidence=? WHERE source_meeting_id=?""",
+                (client_id, occurred_at, url, attribution_source, attribution_confidence, existing[0]),
             )
             self.conn.commit()
             return existing[0]
         cur = self.conn.execute(
             """INSERT INTO source_meeting (client_id, external_id, occurred_at, url,
                                             attribution_source, attribution_confidence)
-               VALUES (?, ?, ?, ?, 'manual', 'certain')""",
-            (client_id, external_id, occurred_at, url),
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (client_id, external_id, occurred_at, url, attribution_source, attribution_confidence),
         )
         self.conn.commit()
         return cur.lastrowid
@@ -433,15 +443,15 @@ Only emit alias_proposals when you are CERTAIN of the identity (e.g. speaker exp
 
 
 def build_prompt_resolve(meeting, entities):
+    """Dynamic (per-call) content only. The meeting metadata + transcript used to
+    be re-included here and duplicated across all three passes -- moved to
+    render_meeting_prefix(), which invoke_codex_cached() writes once to a temp
+    file reused across all three passes for this meeting instead of re-embedding
+    the transcript in every call."""
     return (
         PROMPT_A_INSTRUCTIONS
         + "\n================================================================\n"
         + render_entity_block(entities)
-        + "\n================================================================\n"
-        + f"MEETING METADATA:\n  guid: {meeting.get('guid')}\n  name: {meeting.get('name')}\n"
-        + f"  occurred_at: {meeting.get('occurred_at')}\n"
-        + "\n================================================================\nTRANSCRIPT:\n"
-        + render_transcript(meeting)
         + "\n================================================================\n"
         + "Emit the JSON object now. Begin with `{` and end with `}`."
     )
@@ -515,17 +525,13 @@ Note: predicates outside the approved vocab will be DROPPED. Use only the listed
 
 
 def build_prompt_structure(meeting, entities, predicates):
+    """Dynamic content only -- see build_prompt_resolve's docstring."""
     return (
         PROMPT_B_INSTRUCTIONS.replace("{{meeting_occurred_at}}", meeting.get("occurred_at") or "")
         + "\n================================================================\n"
         + render_entity_block(entities)
         + "\n================================================================\n"
         + render_predicate_block(predicates)
-        + "\n================================================================\n"
-        + f"MEETING METADATA:\n  guid: {meeting.get('guid')}\n  name: {meeting.get('name')}\n"
-        + f"  occurred_at: {meeting.get('occurred_at')}\n"
-        + "\n================================================================\nTRANSCRIPT:\n"
-        + render_transcript(meeting)
         + "\n================================================================\n"
         + "Emit the JSON object now. Begin with `{` and end with `}`."
     )
@@ -580,15 +586,11 @@ Output a single JSON object — no prose, no fences:
 
 
 def build_prompt_observe(meeting, entities):
+    """Dynamic content only -- see build_prompt_resolve's docstring."""
     return (
         PROMPT_C_INSTRUCTIONS
         + "\n================================================================\n"
         + render_entity_block(entities)
-        + "\n================================================================\n"
-        + f"MEETING METADATA:\n  guid: {meeting.get('guid')}\n  name: {meeting.get('name')}\n"
-        + f"  occurred_at: {meeting.get('occurred_at')}\n"
-        + "\n================================================================\nTRANSCRIPT:\n"
-        + render_transcript(meeting)
         + "\n================================================================\n"
         + "Emit the JSON object now. Begin with `{` and end with `}`."
     )
@@ -599,6 +601,11 @@ def build_prompt_observe(meeting, entities):
 # =============================================================================
 
 def invoke_claude(prompt, claude_bin="claude", model=None, timeout=900):
+    """Bare `claude -p` CLI subprocess call. No longer called anywhere in this
+    file -- the Pass B/C correction-prompt path (invoke_claude_json) and the
+    three main passes both now go through codex exec (invoke_codex /
+    invoke_codex_cached). Left defined, unused, rather than deleted, in case
+    anything outside this file imports it directly."""
     if not shutil.which(claude_bin):
         raise SystemExit(f"`{claude_bin}` not found on PATH.")
     cmd = [claude_bin, "-p"]
@@ -608,6 +615,167 @@ def invoke_claude(prompt, claude_bin="claude", model=None, timeout=900):
     if proc.returncode != 0:
         raise SystemExit(f"claude -p failed (rc={proc.returncode}): {proc.stderr[:500]}")
     return proc.stdout
+
+
+def render_meeting_prefix(meeting):
+    """Stable, per-meeting content: metadata + transcript. Byte-identical across
+    all three (resolve/structure/observe) passes for one meeting -- written once
+    to a temp file by invoke_codex_cached() and reused across all three passes,
+    instead of being re-embedded in every call's prompt.
+
+    Previously each build_prompt_* function re-included the full transcript text
+    after pass-specific instructions (which differ per pass), so it was resent
+    at full length on every one of the 3 main-pass subprocess calls, AND the
+    varying instructions coming first would have defeated prefix-based caching
+    even if the invocation mechanism supported it (caching only credits an
+    identical leading *prefix*; content after the first differing byte doesn't
+    help). This keeps the transcript out of the per-call prompt/argv entirely.
+    """
+    return (
+        f"MEETING METADATA:\n  guid: {meeting.get('guid')}\n  name: {meeting.get('name')}\n"
+        f"  occurred_at: {meeting.get('occurred_at')}\n"
+        "\n================================================================\nTRANSCRIPT:\n"
+        + render_transcript(meeting)
+        + "\n================================================================\n"
+    )
+
+
+def invoke_codex(prompt, model=None, timeout=900):
+    """`codex exec` non-interactive CLI call (OpenAI, not Anthropic). Used for
+    every main-pass invocation and JSON-repair retry in the cached path below --
+    no Anthropic SDK, no `claude -p`, anywhere in this path.
+
+    codex resolves to a .cmd shim on Windows (npm global install). Win32's
+    CreateProcess (what subprocess.run uses with shell=False) can only launch
+    real PE executables directly -- it can't interpret .cmd/.bat, which is why
+    a bare ["codex", "exec"] argv list fails with WinError 2 even though the
+    same command works fine typed into an interactive shell (the shell does its
+    own PATHEXT resolution that CreateProcess doesn't). shell=True routes the
+    call through cmd.exe, which does resolve .cmd shims correctly; the prompt
+    itself still goes through `input=`/stdin, not the shell command line, so
+    quoting/escaping the (large) transcript-adjacent prompt text is a non-issue.
+
+    encoding="utf-8" is explicit because text=True without it defaults to the
+    process's locale encoding -- cp1252 on this Windows box -- which raises
+    UnicodeEncodeError on any transcript containing e.g. curly quotes or the
+    <=/>= symbols that show up in ordinary meeting notes.
+    """
+    codex_path = shutil.which("codex")
+    if not codex_path:
+        raise SystemExit("`codex` not found on PATH.")
+    cmd = "codex exec"
+    if model:
+        cmd += f" -m {model}"
+    proc = subprocess.run(
+        cmd, input=prompt, text=True, encoding="utf-8", capture_output=True,
+        timeout=timeout, shell=True,
+    )
+    if proc.returncode != 0:
+        raise SystemExit(f"codex exec failed (rc={proc.returncode}): {proc.stderr[:500]}")
+    return proc.stdout
+
+
+# guid -> Path. Module-level (not a per-call mutable-default-arg) so BOTH the
+# three main passes (via get_meeting_prefix_path) AND the Pass B/C correction
+# retries (via get_meeting_prefix_path_for_guid) reuse the same on-disk file
+# for a given meeting within one process run, instead of each having its own
+# private cache. Previously the correction path had no cache at all -- it
+# re-embedded the full transcript_text (measured at 51,000-67,000 chars,
+# ~13,000-17,000 tokens) directly into every correction prompt, on top of the
+# 3 main passes already paying for it once each -- the single largest
+# contributor to per-meeting cost/time, worse than the original 3x-resend bug
+# this whole caching mechanism was built to fix.
+_meeting_prefix_files = {}
+
+
+def get_meeting_prefix_path(meeting):
+    """Write (once per guid per process) and return the path to this meeting's
+    stable transcript+metadata prefix file."""
+    guid = meeting.get("guid") or "unknown"
+    if guid not in _meeting_prefix_files:
+        tmp = Path(os.environ.get("TEMP", "/tmp")) / f"codex_meeting_prefix_{guid}.txt"
+        tmp.write_text(render_meeting_prefix(meeting), encoding="utf-8")
+        _meeting_prefix_files[guid] = tmp
+    return _meeting_prefix_files[guid]
+
+
+def get_meeting_prefix_path_for_guid(guid):
+    """Look up a prefix file already written by get_meeting_prefix_path() earlier
+    in this same process. The correction-retry path only has the guid (see
+    apply_structure/apply_observe's signature), not the full meeting dict -- but
+    the corresponding main pass for this meeting always writes the file first
+    within the same run, so a lookup miss here means a real ordering bug, not a
+    normal condition to paper over with a fallback re-fetch."""
+    if guid not in _meeting_prefix_files:
+        raise RuntimeError(
+            f"No cached transcript prefix file for guid {guid!r} -- expected the "
+            "main pass (Pass A/B/C) for this meeting to have written one first."
+        )
+    return _meeting_prefix_files[guid]
+
+
+def invoke_codex_cached(meeting, dynamic_prompt, model=None, timeout=900):
+    """codex exec call with the meeting transcript written once to a temp file
+    and reused across all three passes for this meeting (and their correction
+    retries -- see get_meeting_prefix_path_for_guid), instead of re-embedding
+    the full transcript text in every call's prompt/argv. This both avoids
+    resending the transcript repeatedly in the request itself and avoids
+    putting a large transcript blob directly in a shell argument.
+
+    Caveat, stated plainly rather than assumed: OpenAI's API does automatic
+    prefix-based prompt caching (no manual cache_control breakpoint needed,
+    unlike Anthropic's), but `codex exec` is a full agent harness -- I do not
+    have visibility into whether its own internal request construction (system
+    prompt, tool-call plumbing, session bookkeeping) preserves a stable prefix
+    across separate cold invocations the way a raw Chat Completions/Responses
+    API call would. This still gets the file written once instead of the
+    transcript text re-embedded in every prompt/argv, and keeps the ordering
+    (stable content first, varying instructions after) that caching -- if
+    codex's harness allows it -- depends on. Flagging this rather than
+    overclaiming a guaranteed discount the way the Anthropic version could.
+    """
+    prefix_path = get_meeting_prefix_path(meeting)
+    prompt = (
+        f"Read the meeting transcript + metadata from this file: {prefix_path}\n"
+        "Do not modify that file or any other file. Then complete this task using its content:\n\n"
+        + dynamic_prompt
+    )
+    return invoke_codex(prompt, model=model, timeout=timeout)
+
+
+def invoke_claude_json_cached(meeting, dynamic_prompt, model, raw_path=None, max_repairs=1):
+    """Same contract as invoke_claude_json, but for the three main passes: uses
+    invoke_codex_cached() (Codex/OpenAI, not Anthropic) for the primary call and
+    every repair retry.
+    """
+    raw = invoke_codex_cached(meeting, dynamic_prompt, model)
+    if raw_path:
+        Path(raw_path).write_text(raw)
+    try:
+        return extract_json(raw), raw
+    except json.JSONDecodeError as exc:
+        for attempt in range(1, max_repairs + 1):
+            repair = (
+                "Your previous response was not valid JSON. The parser reported:\n"
+                f"  {exc.msg} (line {exc.lineno} col {exc.colno})\n\n"
+                "Common mistakes: bare token values without quotes, trailing commas, single quotes, "
+                "comments, or text outside the JSON object.\n\n"
+                "Re-emit a SINGLE valid JSON object with the SAME content. No prose, no fences, "
+                "no commentary outside the object. Begin with `{` and end with `}`.\n\n"
+                "PREVIOUS (invalid) RESPONSE:\n" + raw[:6000]
+            )
+            raw = invoke_codex(repair, model)
+            if raw_path:
+                Path(str(raw_path) + f".repair{attempt}").write_text(raw)
+            try:
+                return extract_json(raw), raw
+            except json.JSONDecodeError as exc2:
+                exc = exc2
+                continue
+        raise SystemExit(
+            f"Could not get valid JSON after {max_repairs} repair attempt(s). Last error: {exc}\n"
+            f"Raw head: {raw[:400]}"
+        )
 
 
 def extract_json(text):
@@ -626,8 +794,12 @@ def extract_json(text):
 
 
 def invoke_claude_json(prompt, claude_bin, model, raw_path=None, max_repairs=1):
-    """Invoke claude -p, parse JSON. On parse failure, send a repair prompt up to max_repairs times."""
-    raw = invoke_claude(prompt, claude_bin, model)
+    """Used by the Pass B/C correction-prompt retry path (build_correction_prompt
+    call sites). Despite the name (kept to avoid touching those call sites'
+    signature), this now calls codex exec, not claude -p -- claude_bin is
+    accepted but ignored. Parses JSON; on parse failure, sends a repair prompt
+    up to max_repairs times."""
+    raw = invoke_codex(prompt, model)
     if raw_path:
         Path(raw_path).write_text(raw)
     try:
@@ -643,7 +815,7 @@ def invoke_claude_json(prompt, claude_bin, model, raw_path=None, max_repairs=1):
                 "no commentary outside the object. Begin with `{` and end with `}`.\n\n"
                 "PREVIOUS (invalid) RESPONSE:\n" + raw[:6000]
             )
-            raw = invoke_claude(repair, claude_bin, model)
+            raw = invoke_codex(repair, model)
             if raw_path:
                 Path(str(raw_path) + f".repair{attempt}").write_text(raw)
             try:
@@ -870,8 +1042,17 @@ def validate_notes(rows, transcript_text):
     return good, bad
 
 
-def build_correction_prompt(pass_kind, bad_rows, transcript_text, vocab_names=None, meeting_occurred_at=None):
-    """One bundled re-prompt: list each rejected row with reasons; ask FIX or DROP."""
+def build_correction_prompt(pass_kind, bad_rows, prefix_path, vocab_names=None, meeting_occurred_at=None):
+    """One bundled re-prompt: list each rejected row with reasons; ask FIX or DROP.
+
+    Takes prefix_path (the same cached transcript+metadata file written by
+    get_meeting_prefix_path for this meeting's main passes) instead of the raw
+    transcript_text string. Previously this embedded the full transcript inline
+    on every correction call -- measured at 51,000-67,000 chars (~13,000-17,000
+    tokens) -- on top of the 3 main passes already sending it once each. That
+    was the single largest cost driver per meeting, worse than the original
+    3x-resend bug the cached-file approach was built to fix in the first place.
+    """
     items = []
     for i, (row, reasons) in enumerate(bad_rows, start=1):
         reasons_str = "; ".join(f"{r['code']}: {r.get('detail', '')}" for r in reasons)
@@ -898,8 +1079,9 @@ REJECTED ITEMS ({len(bad_rows)}):
 {items_block}
 
 ================================================================
-TRANSCRIPT (for verbatim-quote lookup):
-{transcript_text}
+For verbatim-quote lookup, read the meeting transcript + metadata from this
+file: {prefix_path}
+Do not modify that file or any other file.
 
 ================================================================
 Output a single JSON object — no prose, no fences:
@@ -975,7 +1157,7 @@ def apply_structure(db, client_id, source_meeting_id, source_external_id, occurr
     for attempt in range(1, MAX_RETRIES + 1):
         if not bad:
             break
-        prompt = build_correction_prompt("edges", bad, transcript_text,
+        prompt = build_correction_prompt("edges", bad, get_meeting_prefix_path_for_guid(source_external_id),
                                           vocab_names=vocab_names,
                                           meeting_occurred_at=occurred_at_str)
         if rdir:
@@ -1075,7 +1257,7 @@ def apply_observe(db, client_id, source_meeting_id, source_external_id, occurred
     for attempt in range(1, MAX_RETRIES + 1):
         if not bad:
             break
-        prompt = build_correction_prompt("notes", bad, transcript_text,
+        prompt = build_correction_prompt("notes", bad, get_meeting_prefix_path_for_guid(source_external_id),
                                           meeting_occurred_at=occurred_at_str)
         if rdir:
             (rdir / f"prompt_C_correct_{attempt}.txt").write_text(prompt)
@@ -1129,6 +1311,13 @@ def main():
     p.add_argument("--db", default=os.path.join(os.path.dirname(__file__), "agent_memory.db"))
     p.add_argument("--claude-bin", default="claude")
     p.add_argument("--model", help="Optional model id to pass to claude -p")
+    p.add_argument("--attribution-source", default="manual",
+                    help="How --client-slug was determined (see resolve_client.py): "
+                         "'cortado_account' for a direct account guid, 'attendee_domain' or "
+                         "'content_inference' for a fallback match, 'manual' (default) otherwise.")
+    p.add_argument("--attribution-confidence", default="certain",
+                    help="certain|likely|guessed -- pair with --attribution-source; "
+                         "resolve_client.py's fallback tiers are 'likely'/'guessed', not 'certain'.")
     g = p.add_mutually_exclusive_group(required=True)
     g.add_argument("--dry-run", action="store_true")
     g.add_argument("--execute", action="store_true")
@@ -1156,15 +1345,15 @@ def main():
     # ---------- Pass A: Resolve ----------
     entities = db.snapshot_entities(client_id)
     prompt_a = build_prompt_resolve(meeting, entities)
-    print(f"\n[Pass A — Resolve]  prompt_chars={len(prompt_a)} (~{len(prompt_a)//4} tokens)  entities_in_scope={len(entities)}")
+    print(f"\n[Pass A — Resolve]  dynamic_chars={len(prompt_a)} (~{len(prompt_a)//4} tokens, transcript sent separately as a cached prefix)  entities_in_scope={len(entities)}")
     if rdir:
-        (rdir / "prompt_A_resolve.txt").write_text(prompt_a)
+        (rdir / "prompt_A_resolve.txt").write_text(render_meeting_prefix(meeting) + prompt_a)
 
     if args.dry_run:
         print("  (dry-run; skipping LLM)")
     else:
-        result_a, _raw = invoke_claude_json(
-            prompt_a, args.claude_bin, args.model,
+        result_a, _raw = invoke_claude_json_cached(
+            meeting, prompt_a, args.model,
             raw_path=(rdir / "response_A_resolve.json") if rdir else None,
         )
         stats_a, _temp_a = apply_resolve(db, client_id, args.meeting_guid, occurred_at, result_a)
@@ -1175,17 +1364,20 @@ def main():
     entities = db.snapshot_entities(client_id)
     predicates = db.snapshot_predicates(status_filter=["approved", "proposed"])
     vocab_names = {p["name"] for p in predicates}
-    source_meeting_id = db.upsert_source_meeting(client_id, args.meeting_guid, occurred_at)
+    source_meeting_id = db.upsert_source_meeting(
+        client_id, args.meeting_guid, occurred_at,
+        attribution_source=args.attribution_source, attribution_confidence=args.attribution_confidence,
+    )
     prompt_b = build_prompt_structure(meeting, entities, predicates)
-    print(f"\n[Pass B — Structure]  prompt_chars={len(prompt_b)} (~{len(prompt_b)//4} tokens)  entities_in_scope={len(entities)}  predicates={len(predicates)}")
+    print(f"\n[Pass B — Structure]  dynamic_chars={len(prompt_b)} (~{len(prompt_b)//4} tokens, transcript sent separately as a cached prefix)  entities_in_scope={len(entities)}  predicates={len(predicates)}")
     if rdir:
-        (rdir / "prompt_B_structure.txt").write_text(prompt_b)
+        (rdir / "prompt_B_structure.txt").write_text(render_meeting_prefix(meeting) + prompt_b)
 
     if args.dry_run:
         print("  (dry-run; skipping LLM)")
     else:
-        result_b, _raw = invoke_claude_json(
-            prompt_b, args.claude_bin, args.model,
+        result_b, _raw = invoke_claude_json_cached(
+            meeting, prompt_b, args.model,
             raw_path=(rdir / "response_B_structure.json") if rdir else None,
         )
         stats_b = apply_structure(db, client_id, source_meeting_id, args.meeting_guid,
@@ -1196,16 +1388,16 @@ def main():
     # ---------- Pass C: Observe ----------
     entities = db.snapshot_entities(client_id)
     prompt_c = build_prompt_observe(meeting, entities)
-    print(f"\n[Pass C — Observe]  prompt_chars={len(prompt_c)} (~{len(prompt_c)//4} tokens)  entities_in_scope={len(entities)}")
+    print(f"\n[Pass C — Observe]  dynamic_chars={len(prompt_c)} (~{len(prompt_c)//4} tokens, transcript sent separately as a cached prefix)  entities_in_scope={len(entities)}")
     if rdir:
-        (rdir / "prompt_C_observe.txt").write_text(prompt_c)
+        (rdir / "prompt_C_observe.txt").write_text(render_meeting_prefix(meeting) + prompt_c)
 
     if args.dry_run:
         print("  (dry-run; skipping LLM)")
         return
 
-    result_c, _raw = invoke_claude_json(
-        prompt_c, args.claude_bin, args.model,
+    result_c, _raw = invoke_claude_json_cached(
+        meeting, prompt_c, args.model,
         raw_path=(rdir / "response_C_observe.json") if rdir else None,
     )
     stats_c = apply_observe(db, client_id, source_meeting_id, args.meeting_guid,
