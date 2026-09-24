@@ -49,6 +49,7 @@ EXCLUDED_MEETING_TYPES = frozenset({
 # meeting that merely mentions these names in passing.
 EXCLUDED_MEETING_TITLES = frozenset({
     "togs <> bernoske call",
+    "weekly grow meeting",
 })
 
 # Meeting types confirmed to be commercial/business content safe to gate through
