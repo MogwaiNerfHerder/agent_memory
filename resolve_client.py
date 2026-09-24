@@ -220,6 +220,43 @@ def build_domain_keyword_index(conn: sqlite3.Connection, transcript_glob: str) -
 _STOPWORDS = {
     "meeting", "call", "review", "weekly", "sync", "check", "update", "catch",
     "up", "with", "and", "the", "minute", "minutes", "intro", "monthly", "re",
+    # Generic corporate-suffix words: too weak a signal alone since they're
+    # common across many unrelated company names and everyday titles.
+    # Confirmed false positives on real data even after the word-boundary
+    # fix: "Quick Connect" matched "Amusement Connect" via "connect";
+    # "Private Company ICP" matched "Frontenac Company" via "company";
+    # "Jennings Executive Search <> Cortado Group" matched "Reservoir
+    # Communications Group" via "group". Safe to exclude broadly: every
+    # affected client name still has a distinctive token left (e.g.
+    # "Aventiv Technologies" still matches via "aventiv" alone).
+    "group", "company", "connect", "communications", "partners", "solutions",
+    "holdings", "enterprises", "associates", "consulting", "systems",
+    "technologies", "technology", "capital", "advisors", "international",
+    "global", "services",
+    # Generic assessment/engagement terminology, not corporate suffixes but
+    # the same failure mode: common enough as standalone business jargon to
+    # be a weak signal even when it happens to also be part of one client's
+    # own name. Confirmed false positive: "Sharon <> George | Pricing
+    # Diagnostic" matched Diagnostic Imaging Centers of Texas (DICOT) via
+    # "diagnostic" -- DICOT still resolves fine via its other distinctive
+    # tokens (dicot, imaging, centers, texas).
+    "diagnostic", "assessment", "engagement", "planning", "strategy",
+    "project", "program", "initiative",
+    # Two more confirmed false positives on real data: "internal" (matches
+    # ANY internal-meeting title against a client literally named
+    # "Internal" -- about as generic a word as exists) and "leadership"
+    # (matched "Territory Plan...sales leadership" against Center for
+    # Creative Leadership via ordinary business usage of the word, nothing
+    # to do with the client). Both clients lose title-keyword resolution
+    # entirely as a result -- correct: neither had a more distinctive token
+    # to fall back on, and no resolution beats a wrong one.
+    "internal", "leadership", "growth",
+    # "development" matched "Sierra Development" via the generic business
+    # phrase "Report Development"; "point" matched "Wind Point Partners"
+    # via "Point of Contact", an extremely common phrase. Both clients keep
+    # a distinctive token (sierra, wind) so this only removes the weak
+    # signal, not all resolution.
+    "development", "point",
 }
 
 
@@ -269,12 +306,18 @@ def _resolve_via_title_keyword(index: DomainKeywordIndex, meeting: dict) -> tupl
     title = (meeting.get("name") or "").lower()
     if not title:
         return None
+    title_words = set(re.split(r"[^a-z0-9]+", title))
     candidates = set()
     for client_id, slug, name in index.client_names:
         if slug == SELF_CLIENT_SLUG:
             continue
         tokens = [t for t in re.split(r"[^a-z0-9]+", name.lower()) if len(t) >= 4 and t not in _STOPWORDS]
-        if tokens and any(t in title for t in tokens):
+        # Whole-word match against the title's own tokens, not substring
+        # containment -- `in` matched "point" (a token of "Wind Point
+        # Partners") inside "touchpoint", a completely unrelated word.
+        # Confirmed on real data: "Cortado initial assessment touchpoint"
+        # false-matched Wind Point Partners this way.
+        if tokens and any(t in title_words for t in tokens):
             candidates.add((client_id, slug))
     return next(iter(candidates)) if len(candidates) == 1 else None
 
