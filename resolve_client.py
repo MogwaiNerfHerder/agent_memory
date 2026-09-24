@@ -251,12 +251,28 @@ def _cross_portfolio_candidates(index: DomainKeywordIndex, meeting: dict) -> set
     return candidates or None
 
 
+# Cortado's own client row (created because Cortado has an account entry in
+# its own platform, e.g. for internal-business meetings). Excluded from
+# title-keyword candidacy: "Cortado" is the company's own name, and shows up
+# in a huge share of meeting titles as pure boilerplate (Cortado's own
+# naming convention is "{Client} | Cortado // {Type}") -- not as a signal
+# that the meeting is actually about Cortado itself. Left in, its token
+# ("cortado") collided with the real, unambiguous single match on almost
+# every title following that convention, creating false ambiguity and
+# silently dropping the meeting to unassigned even when e.g. "Aventiv" alone
+# was a clean, correct answer. Confirmed on real data: ~114 cached
+# transcripts follow this naming pattern.
+SELF_CLIENT_SLUG = "cortado-group"
+
+
 def _resolve_via_title_keyword(index: DomainKeywordIndex, meeting: dict) -> tuple[int, str] | None:
     title = (meeting.get("name") or "").lower()
     if not title:
         return None
     candidates = set()
     for client_id, slug, name in index.client_names:
+        if slug == SELF_CLIENT_SLUG:
+            continue
         tokens = [t for t in re.split(r"[^a-z0-9]+", name.lower()) if len(t) >= 4 and t not in _STOPWORDS]
         if tokens and any(t in title for t in tokens):
             candidates.add((client_id, slug))
