@@ -41,6 +41,16 @@ EXCLUDED_MEETING_TYPES = frozenset({
     "GROW",
 })
 
+# Specific recurring meeting titles confirmed personal regardless of their
+# platform meeting_type -- human-confirmed exclusion, checked before the
+# type-based gate below since it's absolute (a title match excludes even an
+# otherwise-eligible type). Case-insensitive exact match on the stripped
+# title, not a substring/keyword search -- avoid excluding an unrelated
+# meeting that merely mentions these names in passing.
+EXCLUDED_MEETING_TITLES = frozenset({
+    "togs <> bernoske call",
+})
+
 # Meeting types confirmed to be commercial/business content safe to gate through
 # to extraction (still subject to the mixed-content keyword check below).
 # Starter list -- expand only with business sign-off, not silently.
@@ -103,6 +113,10 @@ def classify_sensitivity(meeting: dict[str, Any]) -> GateResult:
     `transcript`/`transcript_clean` for the mixed-content check. Missing
     fields degrade to held, not to eligible.
     """
+    title = (meeting.get("name") or "").strip().lower()
+    if title in EXCLUDED_MEETING_TITLES:
+        return GateResult("excluded", f"meeting_title_excluded:{title}")
+
     meeting_type = (meeting.get("meeting_type") or "").strip()
 
     if not meeting_type:
