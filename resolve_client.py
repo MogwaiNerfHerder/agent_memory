@@ -257,6 +257,12 @@ _STOPWORDS = {
     # a distinctive token (sierra, wind) so this only removes the weak
     # signal, not all resolution.
     "development", "point",
+    # "health" matched "Cox Health" (an unrelated real company) against
+    # "Mobile Health Consumer" -- also revealed that "HHIT"/"Harmony
+    # Healthcare IT" is a real, separate Cortado platform account, not the
+    # same company as Mobile Health Consumer at all. Mobile Health Consumer
+    # keeps "mobile"/"consumer" as distinctive tokens.
+    "health",
 }
 
 
