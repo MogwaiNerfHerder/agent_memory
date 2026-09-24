@@ -151,7 +151,13 @@ def main():
     # Show users which tenant they're talking to (channel-scoped, not LLM-controllable)
     print(f"[knowledge-bot scope] client={client_slug} sensitivity≤{max_sensitivity}", file=sys.stderr)
 
-    qg = [sys.executable, DEFAULT_QUERY_GRAPH, "--db", args.db]
+    # --max-sensitivity applied to every query_graph.py call, not just the
+    # subcommands that currently act on it (notes/recent/timeline/
+    # stakeholders/project/dossier) -- harmless no-op for the others (find/
+    # drifts/stats), and means a future subcommand doesn't silently start
+    # leaking sensitivity-gated content just because someone forgot to
+    # thread the flag through when adding it.
+    qg = [sys.executable, DEFAULT_QUERY_GRAPH, "--db", args.db, "--max-sensitivity", max_sensitivity]
     rd = [sys.executable, DEFAULT_RENDER_DOSSIER, "--db", args.db,
           "--client-slug", client_slug, "--max-sensitivity", max_sensitivity]
 
