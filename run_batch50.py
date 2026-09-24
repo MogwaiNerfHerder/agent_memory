@@ -137,9 +137,15 @@ for i, guid in enumerate(GUIDS, start=1):
         env=CHILD_ENV, timeout=1200,
     )
     elapsed = time.time() - t0
-    ok = proc.returncode == 0
+    # exit code 3 = permanently held by the sensitivity gate (see
+    # extract_meeting.py's SENSITIVITY_HELD_EXIT_CODE) -- a deterministic
+    # decision based on meeting_type/content, not a transient failure, so it
+    # counts as "done" (ok=True) for resume purposes rather than being
+    # retried forever.
+    held = proc.returncode == 3
+    ok = proc.returncode == 0 or held
     entry = {
-        "i": i, "guid": guid, "ok": ok, "elapsed_s": round(elapsed, 1),
+        "i": i, "guid": guid, "ok": ok, "held": held, "elapsed_s": round(elapsed, 1),
         "client_slug": resolution.client_slug, "resolution_status": resolution.status,
         "resolution_reason": resolution.reason,
         "stdout_tail": proc.stdout[-1500:], "stderr_tail": proc.stderr[-800:] if not ok else "",
@@ -147,8 +153,9 @@ for i, guid in enumerate(GUIDS, start=1):
     results.append(entry)
     with LOG_PATH.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
+    status = "HELD" if held else ("ok" if ok else "FAILED")
     print(f"[{i}/{len(GUIDS)}] {guid} -> client={resolution.client_slug} ({resolution.status}) "
-          f"ok={ok} elapsed={elapsed:.1f}s", flush=True)
+          f"{status} elapsed={elapsed:.1f}s", flush=True)
 
 ok_count = sum(1 for r in results if r["ok"])
 print(f"\nDone. {ok_count}/{len(results)} succeeded.")
