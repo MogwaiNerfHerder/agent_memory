@@ -58,6 +58,14 @@ ELIGIBLE_MEETING_TYPES = frozenset({
     "Internal Project Post Mortem",
     "Mystery Shop",
     "Mystery Shop - Competitor",
+    # Added 2026-09-24 alongside pull_meetings.py's IN_SCOPE_TYPES expansion:
+    # sprint/task-status and project-planning content, not personnel/HR in
+    # nature. "Internal Deal Desk Meeting" was considered and deliberately
+    # NOT added here -- see the excluded-pending-review note below.
+    "Project Scrum - Internal",
+    "Project Scrum - External",
+    "Internal",
+    "Internal Project Kick Off",
 })
 
 # Meeting types that, based on this project's own prior findings (see

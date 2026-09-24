@@ -132,12 +132,19 @@ def get_or_create_entity_clone(conn, entity_id, old_client_id, target_client_id,
 
 
 def main():
+    # Generalized beyond the original 'batch-test' shared fake client: the
+    # exact same shared-bucket entity-pooling mistake recurred in
+    # 'unassigned-no-account' after resolve_client.py's per-meeting-isolation
+    # fix (each unassigned meeting now gets its own client going forward) --
+    # this same clone/relink machinery retroactively splits whatever
+    # already-pooled shared client is named here.
+    source_slug = sys.argv[2] if len(sys.argv) > 2 else BATCH_TEST_SLUG
     conn = sqlite3.connect(TESTDB)
     conn.execute("PRAGMA foreign_keys = ON")
 
-    old_client = conn.execute("SELECT client_id FROM client WHERE slug=?", (BATCH_TEST_SLUG,)).fetchone()
+    old_client = conn.execute("SELECT client_id FROM client WHERE slug=?", (source_slug,)).fetchone()
     if not old_client:
-        print("No batch-test client found -- nothing to reassign.")
+        print(f"No '{source_slug}' client found -- nothing to reassign.")
         return
     old_client_id = old_client[0]
 
@@ -147,7 +154,7 @@ def main():
     rows = conn.execute(
         "SELECT source_meeting_id, external_id FROM source_meeting WHERE client_id=?", (old_client_id,)
     ).fetchall()
-    print(f"{len(rows)} meetings currently under the shared '{BATCH_TEST_SLUG}' client.")
+    print(f"{len(rows)} meetings currently under the shared '{source_slug}' client.")
 
     meeting_new_client = {}
     meeting_attribution = {}  # source_meeting_id -> (attribution_source, attribution_confidence)
