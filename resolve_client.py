@@ -39,7 +39,7 @@ from typing import NamedTuple
 sys.path.insert(0, str(Path(__file__).parent))
 from seed_from_cortado import Cortado  # noqa: E402  (reuse the proven API wrapper)
 
-UNASSIGNED_SLUG = "unassigned-no-account"
+UNASSIGNED_SLUG = "unassigned-no-account"  # kept for logging/back-compat; no longer used as an actual client slug -- see _ensure_unassigned_client
 UNASSIGNED_NAME = "Unassigned (no account on meeting -- not a real client, holding bucket only)"
 CROSS_PORTFOLIO_SLUG = "cross-portfolio-pe-relationship"
 CROSS_PORTFOLIO_NAME = (
@@ -76,8 +76,29 @@ def _ensure_holding_client(conn: sqlite3.Connection, slug: str, name: str) -> in
     return cur.lastrowid
 
 
-def _ensure_unassigned_client(conn: sqlite3.Connection) -> int:
-    return _ensure_holding_client(conn, UNASSIGNED_SLUG, UNASSIGNED_NAME)
+def _ensure_unassigned_client(conn: sqlite3.Connection, meeting_guid: str | None = None) -> tuple[int, str]:
+    """One isolated holding client PER unassigned meeting, not one shared
+    bucket for all of them.
+
+    Entities are deduped within a client_id's scope -- pooling every
+    genuinely-unrelated "no signal at all" meeting into one shared
+    unassigned-no-account client repeats the exact mistake the original
+    fake shared 'batch-test' client made (11+ different real companies'
+    entire casts piling into one entity pool), just smaller-scale and
+    recurring. Confirmed on real data: 22 meetings shared one client_id and
+    had accumulated 394 pooled entities, inflating every subsequent Codex
+    call's context (and cost/latency) for every meeting landing there,
+    while also risking two unrelated people (e.g. two different "David"s
+    across two unrelated internal meetings) being silently merged into one
+    entity.
+
+    Falls back to the shared UNASSIGNED_SLUG bucket only if no meeting_guid
+    is available at all (defensive; every real caller has one)."""
+    if not meeting_guid:
+        return _ensure_holding_client(conn, UNASSIGNED_SLUG, UNASSIGNED_NAME), UNASSIGNED_SLUG
+    slug = f"unassigned-{meeting_guid[:8]}"
+    name = f"Unassigned (meeting {meeting_guid[:8]}, no account/domain/title signal -- single-meeting holding bucket, not a real client)"
+    return _ensure_holding_client(conn, slug, name), slug
 
 
 def _ensure_cross_portfolio_client(conn: sqlite3.Connection) -> int:
@@ -104,8 +125,8 @@ def _unique_slug(conn: sqlite3.Connection, base_slug: str, account_guid: str) ->
 def resolve_client_for_meeting(cortado: Cortado, conn: sqlite3.Connection, meeting: dict) -> ResolutionResult:
     account_guid = meeting.get("account")
     if not account_guid:
-        client_id = _ensure_unassigned_client(conn)
-        return ResolutionResult("unassigned", UNASSIGNED_SLUG, client_id, "meeting has no account field")
+        client_id, slug = _ensure_unassigned_client(conn, meeting.get("guid"))
+        return ResolutionResult("unassigned", slug, client_id, "meeting has no account field")
 
     existing = _find_client_by_account_guid(conn, account_guid)
     if existing:
@@ -278,6 +299,6 @@ def resolve_client_for_meeting_with_fallback(
             f"review, none auto-attributed: {', '.join(candidate_names)}",
         )
 
-    client_id = _ensure_unassigned_client(conn)
-    return ResolutionResult("unassigned", UNASSIGNED_SLUG, client_id,
+    client_id, slug = _ensure_unassigned_client(conn, meeting.get("guid"))
+    return ResolutionResult("unassigned", slug, client_id,
                              "no account field, no domain match, no title match")
