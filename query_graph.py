@@ -24,6 +24,30 @@ import sqlite3
 import sys
 from collections import defaultdict
 
+# Shared with the entity_alias/z_memory/edge `sensitivity` column values and
+# render_dossier.py's own ordering. --max-sensitivity lets a caller (notably
+# kbq.py, the bot-facing CLI) cap what a query returns without the caller
+# having to know the column's exact string values or their order.
+_SENSITIVITY_RANK = {"routine": 0, "sensitive": 1, "hr_grade": 2}
+
+
+def _sensitivity_ok(value, max_sensitivity):
+    if not max_sensitivity:
+        return True
+    return _SENSITIVITY_RANK.get(value, 0) <= _SENSITIVITY_RANK.get(max_sensitivity, 2)
+
+
+def _allowed_sensitivities(max_sensitivity):
+    """Values at or below max_sensitivity's rank, for an SQL IN (...) clause.
+    Applying this in SQL (before ORDER BY/LIMIT) rather than filtering the
+    Python result list after fetchall() matters: a LIMIT N query followed by
+    a Python-side filter can silently return fewer than N rows even when N
+    eligible rows exist further back in the unfiltered set."""
+    if not max_sensitivity:
+        return None
+    ceiling = _SENSITIVITY_RANK.get(max_sensitivity, 2)
+    return [v for v, rank in _SENSITIVITY_RANK.items() if rank <= ceiling]
+
 
 def get_client_id(conn, slug):
     row = conn.execute("SELECT client_id, name FROM client WHERE slug=?", (slug,)).fetchone()
@@ -90,15 +114,19 @@ def cmd_dossier(args, conn):
             print(f"  [{etype}] {ename}  (entity_id={eid})")
         return
     for eid, etype, ename in matches:
-        render_entity_dossier(conn, client_id, client_name, eid, etype, ename, json_out=args.json)
+        render_entity_dossier(conn, client_id, client_name, eid, etype, ename, json_out=args.json,
+                               max_sensitivity=getattr(args, "max_sensitivity", None))
 
 
-def render_entity_dossier(conn, client_id, client_name, entity_id, etype, ename, json_out=False):
+def render_entity_dossier(conn, client_id, client_name, entity_id, etype, ename, json_out=False, max_sensitivity=None):
     aliases = conn.execute(
         "SELECT alias_text, alias_kind, confidence FROM entity_alias WHERE entity_id=? ORDER BY alias_kind, alias_text",
         (entity_id,),
     ).fetchall()
     edges = edges_for_entity(conn, client_id, entity_id)
+    # edges_for_entity's row shape has sensitivity at index 7 (see out_edges
+    # build below, which reads the same tuple positionally).
+    edges = [e for e in edges if _sensitivity_ok(e[7], max_sensitivity)]
 
     out_edges = []
     for e in edges:
@@ -159,6 +187,10 @@ def render_entity_dossier(conn, client_id, client_name, entity_id, etype, ename,
 
 def cmd_stakeholders(args, conn):
     client_id, client_name = get_client_id(conn, args.client)
+    allowed = _allowed_sensitivities(getattr(args, "max_sensitivity", None))
+    sens_clause, sens_params = ("", []) if allowed is None else (
+        f" AND e.sensitivity IN ({','.join('?' * len(allowed))})", list(allowed)
+    )
     matches = find_entity(conn, client_id, args.project)
     proj_matches = [m for m in matches if m[1] == "project"]
     if not proj_matches:
@@ -171,9 +203,9 @@ def cmd_stakeholders(args, conn):
                  FROM edge e
                  JOIN entity subj ON subj.entity_id=e.subject_id
                  JOIN predicate p ON p.predicate_id=e.predicate_id
-                WHERE e.client_id=? AND e.object_id=? AND p.name='stakeholder_on'
+                WHERE e.client_id=? AND e.object_id=? AND p.name='stakeholder_on'""" + sens_clause + """
              ORDER BY subj.canonical_name""",
-            (client_id, proj_id),
+            [client_id, proj_id] + sens_params,
         ).fetchall()
         if not rows:
             print("  (none)")
@@ -182,8 +214,8 @@ def cmd_stakeholders(args, conn):
             soft = conn.execute(
                 """SELECT p.name, e.object_literal
                      FROM edge e JOIN predicate p ON p.predicate_id=e.predicate_id
-                    WHERE e.client_id=? AND e.subject_id=? AND p.name LIKE 'stakeholder_%' AND p.name!='stakeholder_on'""",
-                (client_id, sh_id),
+                    WHERE e.client_id=? AND e.subject_id=? AND p.name LIKE 'stakeholder_%' AND p.name!='stakeholder_on'""" + sens_clause,
+                [client_id, sh_id] + sens_params,
             ).fetchall()
             extras = ", ".join(f"{p}={v}" for p, v in soft) if soft else ""
             print(f"  • {sh_name}" + (f"  ({extras})" if extras else ""))
@@ -191,12 +223,18 @@ def cmd_stakeholders(args, conn):
 
 def cmd_project(args, conn):
     client_id, client_name = get_client_id(conn, args.client)
+    max_sensitivity = getattr(args, "max_sensitivity", None)
+    allowed = _allowed_sensitivities(max_sensitivity)
+    sens_clause, sens_params = ("", []) if allowed is None else (
+        f" AND e.sensitivity IN ({','.join('?' * len(allowed))})", list(allowed)
+    )
     matches = [m for m in find_entity(conn, client_id, args.project) if m[1] == "project"]
     if not matches:
         print(f"No project matches '{args.project}'")
         return
     for proj_id, _, proj_name in matches:
-        render_entity_dossier(conn, client_id, client_name, proj_id, "project", proj_name, json_out=args.json)
+        render_entity_dossier(conn, client_id, client_name, proj_id, "project", proj_name, json_out=args.json,
+                               max_sensitivity=max_sensitivity)
         if args.json:
             continue
         # Add a "people" rollup
@@ -204,20 +242,20 @@ def cmd_project(args, conn):
             """SELECT subj.canonical_name, e.object_literal
                  FROM edge e JOIN predicate p ON p.predicate_id=e.predicate_id
                  JOIN entity subj ON subj.entity_id=e.subject_id
-                WHERE e.client_id=? AND e.object_id=? AND p.name='staffed_on' """,
-            (client_id, proj_id),
+                WHERE e.client_id=? AND e.object_id=? AND p.name='staffed_on'""" + sens_clause,
+            [client_id, proj_id] + sens_params,
         ).fetchall()
         roles = {}
         for r in conn.execute(
             """SELECT subj.canonical_name, e.object_literal
                  FROM edge e JOIN predicate p ON p.predicate_id=e.predicate_id
                  JOIN entity subj ON subj.entity_id=e.subject_id
-                WHERE e.client_id=? AND p.name='engagement_role'
+                WHERE e.client_id=? AND p.name='engagement_role'""" + sens_clause + """
                   AND subj.entity_id IN (
                       SELECT subject_id FROM edge WHERE client_id=? AND object_id=?
                                                     AND predicate_id=(SELECT predicate_id FROM predicate WHERE name='staffed_on')
                   )""",
-            (client_id, client_id, proj_id),
+            [client_id] + sens_params + [client_id, proj_id],
         ).fetchall():
             roles.setdefault(r[0], []).append(r[1])
         if team:
@@ -295,23 +333,28 @@ def cmd_discrepancies(args, conn):
 
 def cmd_recent(args, conn):
     client_id, _ = get_client_id(conn, args.client)
-    sql = "SELECT memory_id, content, memory_type, importance, created_at FROM z_memory WHERE client_id=? AND is_active=1 AND deleted_at IS NULL"
+    sql = "SELECT memory_id, content, memory_type, importance, created_at, sensitivity FROM z_memory WHERE client_id=? AND is_active=1 AND deleted_at IS NULL"
     params = [client_id]
     if args.since:
         sql += " AND created_at >= ?"
         params.append(args.since)
+    allowed = _allowed_sensitivities(getattr(args, "max_sensitivity", None))
+    if allowed is not None:
+        sql += f" AND sensitivity IN ({','.join('?' * len(allowed))})"
+        params.extend(allowed)
     sql += " ORDER BY created_at DESC LIMIT ?"
     params.append(args.limit)
     rows = conn.execute(sql, params).fetchall()
     if not rows:
-        print("No hot observations yet (z_memory empty for this client).")
+        print("No hot observations yet (z_memory empty for this client, or all held by sensitivity).")
         return
-    for mid, content, mtype, imp, ts in rows:
+    for mid, content, mtype, imp, ts, sens in rows:
         print(f"  [{mtype} imp={imp} {ts}] {content[:200]}")
 
 
 def cmd_notes(args, conn):
     client_id, _ = get_client_id(conn, args.client)
+    allowed = _allowed_sensitivities(getattr(args, "max_sensitivity", None))
     if args.entity:
         ents = find_entity(conn, client_id, args.entity)
         if not ents:
@@ -330,6 +373,8 @@ def cmd_notes(args, conn):
             params = [eid]
             if args.type:
                 sql += " AND m.memory_type=?"; params.append(args.type)
+            if allowed is not None:
+                sql += f" AND m.sensitivity IN ({','.join('?' * len(allowed))})"; params.extend(allowed)
             sql += " ORDER BY m.created_at DESC LIMIT ?"; params.append(args.limit)
             rows = conn.execute(sql, params).fetchall()
             if not rows:
@@ -357,6 +402,8 @@ def cmd_notes(args, conn):
     params = [client_id]
     if args.type:
         sql += " AND memory_type=?"; params.append(args.type)
+    if allowed is not None:
+        sql += f" AND sensitivity IN ({','.join('?' * len(allowed))})"; params.extend(allowed)
     sql += " ORDER BY created_at DESC LIMIT ?"; params.append(args.limit)
     rows = conn.execute(sql, params).fetchall()
     if not rows:
@@ -478,6 +525,10 @@ def cmd_timeline(args, conn):
         ids = [e[0] for e in ents]
         sql += " AND e.subject_id IN (" + ",".join("?" * len(ids)) + ")"
         params.extend(ids)
+    allowed = _allowed_sensitivities(getattr(args, "max_sensitivity", None))
+    if allowed is not None:
+        sql += f" AND e.sensitivity IN ({','.join('?' * len(allowed))})"
+        params.extend(allowed)
     sql += " ORDER BY e.object_literal, p.name"
     rows = conn.execute(sql, params).fetchall()
     if not rows:
@@ -537,6 +588,9 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--db", default=os.path.join(os.path.dirname(__file__), "agent_memory.db"))
     p.add_argument("--json", action="store_true", help="Machine-readable JSON output where applicable")
+    p.add_argument("--max-sensitivity", choices=["routine", "sensitive", "hr_grade"], default=None,
+                    help="Cap returned notes/edges at this sensitivity tier (unset = unrestricted, "
+                         "for direct human/debug use). kbq.py always passes this.")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("dossier"); s.add_argument("client"); s.add_argument("entity"); s.add_argument("--all", action="store_true")
