@@ -41,6 +41,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+from sensitivity_gate import classify_sensitivity  # noqa: E402
+
+# Distinct exit code for "held by the sensitivity gate" -- lets callers (e.g.
+# run_batch50.py) tell "this meeting is permanently excluded from extraction"
+# apart from a real transient failure that should be retried.
+SENSITIVITY_HELD_EXIT_CODE = 3
+
 
 # =============================================================================
 # Cortado client (unchanged from v0.6)
@@ -1332,6 +1340,12 @@ def main():
     meeting = fetch_meeting(args.cortado_skill_dir, args.meeting_guid)
     if not meeting.get("transcript_clean") and not meeting.get("transcript"):
         raise SystemExit(f"Meeting {args.meeting_guid} has no transcript")
+
+    gate = classify_sensitivity(meeting)
+    if gate.decision != "eligible":
+        print(f"HELD by sensitivity gate: decision={gate.decision} reason={gate.reason}")
+        sys.exit(SENSITIVITY_HELD_EXIT_CODE)
+
     transcript_text = render_transcript(meeting, apply_filler_strip=not args.no_clean_transcript)
     occurred_at = meeting.get("occurred_at")
 

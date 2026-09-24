@@ -47,6 +47,24 @@ BATCH_TEST_SLUG = "batch-test"
 LOCAL_TRANSCRIPT_GLOB = "C:/Work/marketing_commercial_intelligence/data/transcripts/*.json"
 INTERNAL_DOMAIN = "cortadogroup.com"
 
+# Mirrors run_batch50.py's ATTRIBUTION map. Meetings reassigned here were
+# originally written with the pre-resolve_client.py default
+# (attribution_source='manual', attribution_confidence='certain') because
+# they all sat under the shared 'batch-test' client -- that overclaims
+# certainty for whatever real resolve_client_for_meeting() status they
+# actually get here (often 'likely' or 'guessed'). Without this map, a
+# retroactively-reassigned meeting keeps a stale 'certain' label it never
+# earned, silently miscalibrating attribution_confidence against the other
+# two levels (entity_alias.confidence, attribution_event.confidence) that
+# share this same certain|likely|guessed vocabulary.
+ATTRIBUTION = {
+    "resolved": ("cortado_account", "certain"),
+    "resolved_via_domain": ("attendee_domain", "likely"),
+    "resolved_via_title": ("content_inference", "guessed"),
+    "cross_portfolio": ("manual", "guessed"),
+    "unassigned": ("manual", "guessed"),
+}
+
 
 def load_local_meeting(guid):
     import glob
@@ -132,6 +150,7 @@ def main():
     print(f"{len(rows)} meetings currently under the shared '{BATCH_TEST_SLUG}' client.")
 
     meeting_new_client = {}
+    meeting_attribution = {}  # source_meeting_id -> (attribution_source, attribution_confidence)
     meeting_participants = {}  # source_meeting_id -> participants list
     for source_meeting_id, guid in rows:
         meeting = load_local_meeting(guid)
@@ -145,6 +164,7 @@ def main():
             print(f"  {guid}: SKIP (client resolution failed: {resolution.reason})")
             continue
         meeting_new_client[source_meeting_id] = resolution.client_id
+        meeting_attribution[source_meeting_id] = ATTRIBUTION[resolution.status]
         print(f"  {guid}: -> {resolution.client_slug} ({resolution.status})")
 
     # entity_id -> set of source_meeting_id that cite it, across all meetings
@@ -231,8 +251,12 @@ def main():
 
     try:
         for source_meeting_id, new_client_id in meeting_new_client.items():
-            conn.execute("UPDATE source_meeting SET client_id=? WHERE source_meeting_id=?",
-                         (new_client_id, source_meeting_id))
+            attribution_source, attribution_confidence = meeting_attribution[source_meeting_id]
+            conn.execute(
+                "UPDATE source_meeting SET client_id=?, attribution_source=?, attribution_confidence=? "
+                "WHERE source_meeting_id=?",
+                (new_client_id, attribution_source, attribution_confidence, source_meeting_id),
+            )
             moved_meetings += 1
 
             for (memory_id,) in conn.execute(
