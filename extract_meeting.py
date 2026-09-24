@@ -139,6 +139,7 @@ _PUNCT_MAP = str.maketrans({
     "​": "",  "﻿": "",                                  # zero-width
 })
 
+import difflib
 import unicodedata as _uni
 
 
@@ -153,14 +154,46 @@ def _norm(s):
     return s
 
 
+_FUZZY_QUOTE_THRESHOLD = 0.80
+
+
+def _fuzzy_quote_in_transcript(q, normalized_transcript):
+    """Sliding-window fuzzy fallback for quote_in_transcript. _norm() already
+    handles unicode/punctuation/whitespace/case, so a miss past that point is
+    a real content difference: a transcription typo, a dropped/added word, a
+    contraction expanded, minor paraphrase -- not necessarily a hallucinated
+    quote. An exact-substring check treats all of these identically to a
+    genuinely fabricated quote, over-dropping real edges. Windows are scored
+    with difflib (no LLM call -- this is meant to be cheap): window length
+    matches the quote so a loose window doesn't dilute the ratio with
+    unrelated trailing text, and stride is a quarter of the quote length so
+    no true match position falls between two sampled windows."""
+    qlen = len(q)
+    stride = max(1, qlen // 4)
+    best = 0.0
+    for start in range(0, max(1, len(normalized_transcript) - qlen + 1), stride):
+        window = normalized_transcript[start:start + qlen]
+        ratio = difflib.SequenceMatcher(None, q, window, autojunk=False).ratio()
+        if ratio > best:
+            best = ratio
+            if best >= _FUZZY_QUOTE_THRESHOLD:
+                return True
+    return False
+
+
 def quote_in_transcript(quote, transcript_text):
-    """Substring check with normalization. Quotes shorter than 8 chars are accepted blindly."""
+    """Substring check with normalization, falling back to a cheap fuzzy
+    match (no LLM call) before declaring a quote absent. Quotes shorter than
+    8 chars are accepted blindly."""
     if not quote:
         return False
     q = _norm(quote)
     if len(q) < 8:
         return True
-    return q in _norm(transcript_text)
+    normalized_transcript = _norm(transcript_text)
+    if q in normalized_transcript:
+        return True
+    return _fuzzy_quote_in_transcript(q, normalized_transcript)
 
 
 # =============================================================================
@@ -1050,6 +1083,50 @@ def validate_notes(rows, transcript_text):
     return good, bad
 
 
+def auto_repair_edges(bad, vocab_names, transcript_text, temp_to_eid, vocab_predicate_threshold=0.82):
+    """Cheap, code-only repair pass for the subset of validate_edges() failure
+    codes that have a safe, unambiguous fix -- run before the bad rows are
+    sent to an LLM correction call, to save a round-trip on cases that don't
+    need one and to stop burning a retry attempt on rows that were never
+    recoverable in the first place.
+
+    self_edge: subject == object is essentially always a modeling mistake
+    (an attribute described as a relationship), not a fixable typo -- retrying
+    rarely produces a different, correct edge, so these are auto-dropped.
+
+    unknown_predicate: fuzzy-matched against the approved vocabulary. A
+    near-synonym typo (the model said "manages" when the vocab has
+    "manages_project") is safe to auto-correct in code, then re-validated in
+    full (a predicate fix alone doesn't guarantee the rest of the row is
+    valid too).
+
+    Anything else -- unresolved_subject/object, missing/ambiguous object,
+    literal-type/quote failures -- is NOT auto-repaired here. Guessing the
+    "closest" entity for a broken reference risks silently attributing a real
+    fact to the wrong person, which is worse than dropping it; these
+    genuinely need the LLM's judgment (or better grounding earlier, in Pass
+    A) and are left for the normal correction-prompt path.
+
+    Returns (still_bad, newly_good, auto_dropped_count)."""
+    still_bad = []
+    candidates = []
+    auto_dropped = 0
+    for row, reasons in bad:
+        codes = {r["code"] for r in reasons}
+        if codes == {"self_edge"}:
+            auto_dropped += 1
+            continue
+        if codes == {"unknown_predicate"} and vocab_names:
+            close = difflib.get_close_matches(row.get("predicate") or "", vocab_names, n=1, cutoff=vocab_predicate_threshold)
+            if close:
+                candidates.append({**row, "predicate": close[0]})
+                continue
+        still_bad.append((row, reasons))
+    newly_good, still_bad_candidates = validate_edges(candidates, transcript_text, vocab_names, temp_to_eid)
+    still_bad.extend(still_bad_candidates)
+    return still_bad, newly_good, auto_dropped
+
+
 def build_correction_prompt(pass_kind, bad_rows, prefix_path, vocab_names=None, meeting_occurred_at=None):
     """One bundled re-prompt: list each rejected row with reasons; ask FIX or DROP.
 
@@ -1160,6 +1237,14 @@ def apply_structure(db, client_id, source_meeting_id, source_external_id, occurr
 
     good, bad = validate_edges(result.get("edges") or [], transcript_text, vocab_names, temp_to_eid)
     print(f"  Pass B validate: {len(good)} good, {len(bad)} need correction")
+
+    bad, auto_fixed, auto_dropped = auto_repair_edges(bad, vocab_names, transcript_text, temp_to_eid)
+    good.extend(auto_fixed)
+    stats["edges_auto_repaired"] = len(auto_fixed)
+    stats["edges_auto_dropped_self_edge"] = auto_dropped
+    if auto_fixed or auto_dropped:
+        print(f"  Pass B auto-repair (no LLM call): {len(auto_fixed)} predicate-typo fixed, "
+              f"{auto_dropped} self-edges dropped, {len(bad)} still need correction")
 
     MAX_RETRIES = 2
     for attempt in range(1, MAX_RETRIES + 1):
